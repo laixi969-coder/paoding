@@ -151,3 +151,25 @@ def test_postgres_taxonomy_migration_links_and_exports(pg, source, monkeypatch):
     tree = pg.taxonomy.tree()
     assert tree[0]["source_count"] == 2
     assert len(pg.library.fetch_atoms(category=tree[0]["id"])) == 2
+
+
+def test_postgres_library_search_and_filters(pg, source, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from paoding.api.app import create_app
+
+    def analyze(content, instruction):
+        return ANALYSIS_TYPES[content.modality].model_validate(demo_analysis(content)), {
+            "demo": True
+        }
+
+    monkeypatch.setattr(pg.gateway, "analyze", analyze)
+    pg.ingest_file(source)
+    worker = Worker(pg)
+    while worker.run_once():
+        pass
+    with TestClient(create_app(pg)) as client:
+        assert client.get("/api/v1/library", params={"q": "离线验证"}).json()["total"] == 1
+        assert client.get("/api/v1/library", params={"q": "%"}).json()["total"] == 0
+        assert client.get("/api/v1/library", params={"modality": "image"}).json()["total"] == 0
+        assert client.get("/api/v1/library", params={"atom_type": "sop"}).json()["total"] == 1

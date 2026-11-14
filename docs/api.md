@@ -9,6 +9,7 @@
 | GET `/api/v1/jobs/{id}` | 状态、次数、结果、错误码 |
 | POST `/api/v1/jobs/{id}/retry` | 人工重试失败任务 |
 | GET `/api/v1/nodes` | 知识卡片列表，可按平台过滤 |
+| GET `/api/v1/library` | 可分页的知识库工作台数据，支持关键词、来源、模态、分类和元件类型筛选 |
 | GET `/api/v1/nodes/{id}` | 完整解剖、来源、模型信息、Vault 状态 |
 | GET `/api/v1/atoms` | 元件类型/标签/目标平台过滤；q 可做语义/关键词检索 |
 | POST `/api/v1/atoms/{id}/feedback` | 幂等采纳反馈 |
@@ -85,6 +86,7 @@ GET /api/v1/atoms?q=先呈现问题&limit=10
 
 ## v0.2 新增接口
 
+- GET `/` 或 `/library`：知识库工作台，支持卡片浏览、关键词搜索、筛选、详情和近期任务。
 - GET `/capture`：同源收录页，书签可一键提交 URL 与标题；配置令牌的主机先在页面填写。
 - GET `/api/v1/taxonomy`：活动分类树、别名与来源数量。
 - POST `/api/v1/taxonomy/run`：手动入队分类进化任务。

@@ -5,14 +5,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import func, select, text
+from sqlalchemy import String, cast, func, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from paoding import __version__
 from paoding.core.errors import ConfigurationError, Conflict, PaodingError
 from paoding.domain.schemas import FeedbackRequest, IngestRequest
 from paoding.services.runtime import Runtime
-from paoding.storage.tables import AtomElement, EvolutionLog, Job, KnowledgeNode, WatchedAccount
+from paoding.storage.tables import (
+    AtomElement,
+    EvolutionLog,
+    Job,
+    KnowledgeNode,
+    NodeCategory,
+    WatchedAccount,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +43,37 @@ def create_app(runtime=None):
         description="Local-first 多模态知识引擎。异步任务状态与 Vault 同步状态独立可观测。",
     )
     app.state.runtime = rt
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/library", include_in_schema=False)
+    def library_page():
+        from pathlib import Path
+
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            Path(__file__).with_name("library.html").read_text(encoding="utf-8"),
+            headers={
+                "Cache-Control": "no-store",
+                "X-Frame-Options": "DENY",
+                "Referrer-Policy": "no-referrer",
+            },
+        )
+
+    @app.get("/guide", include_in_schema=False)
+    def guide_page():
+        from pathlib import Path
+
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            Path(__file__).with_name("guide.html").read_text(encoding="utf-8"),
+            headers={
+                "Cache-Control": "no-store",
+                "X-Frame-Options": "DENY",
+                "Referrer-Policy": "no-referrer",
+            },
+        )
 
     @app.get("/capture", include_in_schema=False)
     def capture():
@@ -212,6 +250,86 @@ def create_app(runtime=None):
                 for n in session.scalars(stmt.offset(offset).limit(limit))
             ]
 
+    @router.get("/library", tags=["knowledge"])
+    def library(
+        q: str = Query("", max_length=200),
+        platform: str | None = Query(None, max_length=40),
+        modality: str | None = Query(None, pattern="^(text|image|video)$"),
+        atom_type: str | None = Query(None, pattern="^(hook|visual|storyboard|sop)$"),
+        category: str | None = Query(None, max_length=36),
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        """Browse persisted cards with server-side filters and pagination."""
+        filters = []
+        if platform:
+            filters.append(KnowledgeNode.platform == platform)
+        if modality:
+            filters.append(KnowledgeNode.modality == modality)
+        if category:
+            filters.append(
+                select(NodeCategory.node_id)
+                .where(
+                    NodeCategory.node_id == KnowledgeNode.id, NodeCategory.category_id == category
+                )
+                .exists()
+            )
+        if atom_type:
+            filters.append(
+                select(AtomElement.id)
+                .where(AtomElement.node_id == KnowledgeNode.id, AtomElement.atom_type == atom_type)
+                .exists()
+            )
+        if q.strip():
+            term = q.strip()
+            filters.append(
+                or_(
+                    KnowledgeNode.title.icontains(term, autoescape=True),
+                    KnowledgeNode.summary.icontains(term, autoescape=True),
+                    cast(KnowledgeNode.analysis, String).icontains(term, autoescape=True),
+                    select(AtomElement.id)
+                    .where(
+                        AtomElement.node_id == KnowledgeNode.id,
+                        AtomElement.content.icontains(term, autoescape=True),
+                    )
+                    .exists(),
+                )
+            )
+        with rt.db.transaction() as session:
+            total = session.scalar(select(func.count()).select_from(KnowledgeNode).where(*filters))
+            rows = session.scalars(
+                select(KnowledgeNode)
+                .where(*filters)
+                .order_by(KnowledgeNode.created_at.desc(), KnowledgeNode.id.desc())
+                .offset(offset)
+                .limit(limit)
+            ).all()
+            platforms = list(
+                session.scalars(
+                    select(KnowledgeNode.platform).distinct().order_by(KnowledgeNode.platform)
+                )
+            )
+            return {
+                "total": total,
+                "offset": offset,
+                "limit": limit,
+                "platforms": platforms,
+                "items": [
+                    {
+                        "id": row.id,
+                        "title": row.title,
+                        "summary": row.summary,
+                        "platform": row.platform,
+                        "modality": row.modality,
+                        "tags": row.analysis.get("tags", []),
+                        "created_at": row.created_at.isoformat() + "Z",
+                        "vault_status": row.vault_status,
+                        "demo": row.provenance.get("demo", False),
+                    }
+                    for row in rows
+                ],
+            }
+
     @router.get("/nodes/{node_id}", tags=["knowledge"])
     def node(node_id: str):
         with rt.db.transaction() as session:
@@ -223,6 +341,24 @@ def create_app(runtime=None):
                 "title": row.title,
                 "source_url": row.source_url,
                 "analysis": row.analysis,
+                "cross_domain_dna": row.cross_domain_dna,
+                "platform": row.platform,
+                "modality": row.modality,
+                "summary": row.summary,
+                "created_at": row.created_at.isoformat() + "Z",
+                "atoms": [
+                    {
+                        "id": atom.id,
+                        "type": atom.atom_type,
+                        "tags": atom.tags,
+                        "content": atom.content,
+                    }
+                    for atom in session.scalars(
+                        select(AtomElement)
+                        .where(AtomElement.node_id == row.id)
+                        .order_by(AtomElement.created_at, AtomElement.id)
+                    )
+                ],
                 "provenance": row.provenance,
                 "vault_status": row.vault_status,
                 "vault_path": row.vault_path,

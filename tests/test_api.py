@@ -69,3 +69,51 @@ def test_mcp_tools_call_shared_services(rt, source):
             assert not empty.is_error
 
     asyncio.run(run())
+
+
+def test_library_browses_searches_filters_and_detail(rt, source):
+    from sqlalchemy import select
+
+    from paoding.storage.tables import AtomElement, KnowledgeNode, NodeCategory, TaxonomyCategory
+
+    for instruction in ("first", "second"):
+        rt.ingest_file(source, instruction=instruction)
+    worker = Worker(rt)
+    while worker.run_once():
+        pass
+    with rt.db.transaction() as session:
+        nodes = session.scalars(select(KnowledgeNode).order_by(KnowledgeNode.created_at)).all()
+        nodes[0].platform = "youtube"
+        nodes[0].title = "独特标题"
+        atom = session.scalar(select(AtomElement).where(AtomElement.node_id == nodes[0].id))
+        atom.content = "只有元件包含的搜索词"
+        node_id = nodes[0].id
+        category = TaxonomyCategory(name="测试分类", root="sop", canonical_key="test-category")
+        session.add(category)
+        session.flush()
+        category_id = category.id
+        session.add(NodeCategory(node_id=node_id, category_id=category_id))
+    with TestClient(create_app(rt), base_url="http://127.0.0.1:8010") as client:
+        assert client.get("/library").status_code == 200
+        guide = client.get("/guide")
+        assert guide.status_code == 200
+        assert "paoding_fetch_atoms" in guide.text
+        assert "127.0.0.1:8010/api/v1" in guide.text
+        assert 'href="/guide"' in client.get("/library").text
+        assert 'href="/guide"' in client.get("/settings").text
+        page = client.get("/api/v1/library", params={"limit": 1}).json()
+        assert page["total"] == 2 and len(page["items"]) == 1
+        assert "youtube" in page["platforms"]
+        assert client.get("/api/v1/library", params={"q": "独特标题"}).json()["total"] == 1
+        assert (
+            client.get("/api/v1/library", params={"q": "只有元件包含的搜索词"}).json()["total"] == 1
+        )
+        assert client.get("/api/v1/library", params={"q": "%"}).json()["total"] == 0
+        assert client.get("/api/v1/library", params={"platform": "youtube"}).json()["total"] == 1
+        assert client.get("/api/v1/library", params={"modality": "video"}).json()["total"] == 0
+        assert client.get("/api/v1/library", params={"atom_type": "sop"}).json()["total"] == 2
+        assert client.get("/api/v1/library", params={"category": category_id}).json()["total"] == 1
+        assert client.get("/api/v1/library", params={"atom_type": "invalid"}).status_code == 422
+        detail = client.get("/api/v1/nodes/" + node_id).json()
+        assert detail["cross_domain_dna"]["universal_principle"]
+        assert detail["atoms"] and detail["platform"] == "youtube"

@@ -2,7 +2,7 @@
 
 依据 [PRD v1.0](docs/PRD.md) 实现的 Local-First Headless 知识引擎。重点是可扩展、可恢复的底层框架，以及“投喂 → 结构化解剖 → 原子入库 → Obsidian 导出 → REST/MCP 检索”的完整闭环。
 
-**当前交付：v0.2，已实现 PRD 的主要后端模块和采集适配器。** 没有 Web 工作台；Swagger 是接口调试入口。真实模型需要自己的 API Key，抖音/小红书已实现 TikHub 适配，微信/RSS 与视频号导出通道按配置启用。未配置时任务会明确失败，不会自动变成模拟结果。密钥和服务统一见 [配置总清单](docs/configuration.md)，真实账户验收范围见 [接入状态与边界](docs/integrations.md)。
+**当前交付：v0.2，已实现知识库工作台、PRD 的主要后端模块和采集适配器。** 抖音/小红书使用 TikHub 等采集服务，微信/RSS 与视频号导出通道按配置启用。未配置时任务会明确失败，不会自动变成模拟结果。密钥和服务统一见 [配置总清单](docs/configuration.md)，真实账户验收范围见 [接入状态与边界](docs/integrations.md)。
 
 ## 立即验证（不需要 Docker 或模型密钥）
 
@@ -17,7 +17,7 @@ uv run paoding demo
 
 ## 正式本地运行
 
-本机启动后可打开 [后台设置](http://127.0.0.1:8010/settings)，填写模型密钥、采集服务和 Bot 配置；已有密钥不会回显。模型连接测试会发送真实请求，可能产生少量费用。
+本机启动后打开 [知识库工作台](http://127.0.0.1:8010/)，浏览、搜索和筛选卡片、查看拆解详情、反馈知识元件、管理追踪账号和查看进化结果；通过 [后台设置](http://127.0.0.1:8010/settings) 配置模型、采集服务和 Bot。已有密钥不会回显；单模型生成测试会发送真实请求，可能产生费用。
 
 ```sh
 uv sync --frozen
@@ -108,7 +108,7 @@ tests/          业务、恢复、协议、API/MCP、真实 PostgreSQL 测试
 docs/           架构决策、接入合同、运维说明、原始 PRD
 ```
 
-详细说明：[架构](docs/architecture.md) · [平台和模型接入](docs/integrations.md) · [API](docs/api.md) · [运维](docs/operations.md)。
+详细说明：[PRD 对照与待验收事项](docs/prd-status.md) · [架构](docs/architecture.md) · [平台和模型接入](docs/integrations.md) · [API](docs/api.md) · [运维](docs/operations.md)。
 
 ## 验证
 
