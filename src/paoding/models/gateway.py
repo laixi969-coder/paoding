@@ -145,7 +145,7 @@ class ModelGateway:
             timeout=httpx.Timeout(
                 self.settings.model_timeout, connect=self.settings.connect_timeout
             ),
-            transport=self.transport,
+            transport=self.transport or httpx.HTTPTransport(retries=2),
             trust_env=False,
         )
 

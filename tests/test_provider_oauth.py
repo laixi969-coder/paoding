@@ -271,6 +271,19 @@ def test_openrouter_callback_links_account_without_returning_key(rt, tmp_path, m
         assert "sensitive-test-key" not in json.dumps(listing)
 
 
+def test_oauth_callback_failure_logging_does_not_expose_secrets(rt, monkeypatch, caplog):
+    def fail(*args, **kwargs):
+        raise ValueError("sensitive-auth-code")
+
+    monkeypatch.setattr(OAuthManager, "finish", fail)
+    with TestClient(create_app(rt), base_url="http://127.0.0.1:8010") as client:
+        response = client.get("/auth/callback", params={"state": "secret-state", "code": "code"})
+    assert "oauth=failed" in response.text
+    assert "type=ValueError" in caplog.text
+    assert "sensitive-auth-code" not in caplog.text
+    assert "secret-state" not in caplog.text
+
+
 def test_chatgpt_refresh_rotates_token_without_changing_identity(rt):
     calls = []
 
@@ -306,6 +319,7 @@ def test_google_oauth_and_gemini_model_use_bearer_project_header(rt, tmp_path, m
     jwk = jwt.algorithms.RSAAlgorithm.to_jwk(private.public_key(), as_dict=True)
     jwk.update(kid="google-test", alg="RS256")
     nonce = {}
+    granted_scopes = ["openid email https://www.googleapis.com/auth/cloud-platform"]
 
     def auth_request(request):
         if request.url.path.endswith("/certs"):
@@ -331,7 +345,7 @@ def test_google_oauth_and_gemini_model_use_bearer_project_header(rt, tmp_path, m
                 "access_token": "google-access",
                 "refresh_token": "google-refresh",
                 "expires_in": 3600,
-                "scope": "openid email https://www.googleapis.com/auth/cloud-platform",
+                "scope": granted_scopes[0],
             },
         )
 
@@ -341,6 +355,14 @@ def test_google_oauth_and_gemini_model_use_bearer_project_header(rt, tmp_path, m
     assert urlsplit(url).hostname == "accounts.google.com"
     assert params["client_id"] == ["client.apps.googleusercontent.com"]
     assert "https://www.googleapis.com/auth/cloud-platform" in params["scope"][0]
+    assert "https://www.googleapis.com/auth/generative-language.retriever" in params["scope"][0]
+    nonce["value"] = params["nonce"][0]
+    with pytest.raises(ValueError, match="Gemini"):
+        manager.finish(params["state"][0], cookie, "google-code")
+    assert manager.google_account() is None
+    granted_scopes[0] += " https://www.googleapis.com/auth/generative-language.retriever"
+    url, cookie = manager.start("gemini_google", 8010)
+    params = parse_qs(urlsplit(url).query)
     nonce["value"] = params["nonce"][0]
     assert manager.finish(params["state"][0], cookie, "google-code") == "gemini_google"
     assert manager.google_access() == "google-access"

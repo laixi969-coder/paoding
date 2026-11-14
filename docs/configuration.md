@@ -7,7 +7,7 @@ API Key 等配置保存在项目根目录 `.env`，模板是 `.env.example`；�
 ### 网页授权、自定义服务与逐模型测试
 
 - **ChatGPT 登录**：通过官方本地应用授权流程登录，需账号具备相关方案使用权限并在授权时同意使用权限。该方式使用公开 Responses API；目前在庖丁内支持文字与图片，视频请选择其他支持视频输入的服务。
-- **Google Gemini 登录**：在 [Google Cloud Console](https://console.cloud.google.com/) 选择或创建项目，[启用 Generative Language API](https://console.cloud.google.com/flows/enableapi?apiid=generativelanguage.googleapis.com)，配置 OAuth 同意屏幕及测试用户，并创建“桌面应用”类型的 OAuth 客户端。在后台的“Google 授权”填写 Client ID、Client Secret 和项目 ID 后点击“使用 Google 授权 Gemini”。此方式请求 `cloud-platform` 权限，调用使用所填项目的配额和计费，与 Gemini 网页订阅不同；详见 [Google 官方指南](https://ai.google.dev/gemini-api/docs/oauth)。
+- **Google Gemini 登录**：在 [Google Cloud Console](https://console.cloud.google.com/) 选择或创建项目，[启用 Generative Language API](https://console.cloud.google.com/flows/enableapi?apiid=generativelanguage.googleapis.com)，配置 OAuth 同意屏幕及测试用户，并创建“桌面应用”类型的 OAuth 客户端。在后台的“Google 授权”填写 Client ID、Client Secret 和项目 ID 后点击“使用 Google 授权 Gemini”。此方式请求 `cloud-platform` 和 `generative-language.retriever` 权限，调用使用所填项目的配额和计费，与 Gemini 网页订阅不同；详见 [Google 官方指南](https://ai.google.dev/gemini-api/docs/oauth)。
 - **OpenRouter 网页授权**：使用 OpenRouter 自身账户授权。可选择该账户能使用的 GPT、Qwen、GLM 等模型，计费和额度属于 OpenRouter；这不是这些厂商原生账户的登录或订阅授权。
 - 其他厂商的网页版登录不会自动变成模型 API 凭据；需要其官方开放适用于第三方应用的授权接口。当前可配置 API Key 或通过支持的中转服务接入。
 - “添加自定义服务商”可选 OpenRouter、Atlas Cloud 预设，或填写其他 OpenAI-compatible Base URL 和密钥。Atlas Cloud 的聊天接口使用其 `/v1` Base URL；图像/视频生成接口属于不同 API，不能简单视为聊天模型。

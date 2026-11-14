@@ -26,6 +26,8 @@ OPENAI_RESOURCE = "https://api.openai.com/v1"
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
 GOOGLE_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+GOOGLE_GEMINI_SCOPE = "https://www.googleapis.com/auth/generative-language.retriever"
+GOOGLE_SCOPES = {GOOGLE_SCOPE, GOOGLE_GEMINI_SCOPE}
 
 
 class OAuthManager:
@@ -41,7 +43,9 @@ class OAuthManager:
 
     def client(self):
         return httpx.Client(
-            timeout=httpx.Timeout(30, connect=5), transport=self.transport, trust_env=False
+            timeout=httpx.Timeout(30, connect=10),
+            transport=self.transport or httpx.HTTPTransport(retries=2),
+            trust_env=False,
         )
 
     def host_id(self):
@@ -116,7 +120,7 @@ class OAuthManager:
                 "client_id": self.settings.google_oauth_client_id,
                 "response_type": "code",
                 "redirect_uri": callback,
-                "scope": "openid email " + GOOGLE_SCOPE,
+                "scope": "openid email " + " ".join(sorted(GOOGLE_SCOPES)),
                 "state": state,
                 "nonce": nonce,
                 "code_challenge": challenge,
@@ -297,8 +301,9 @@ class OAuthManager:
             raise ValueError("Google 身份验证 nonce 不匹配")
         if record["account"] and record["account"]["subject"] != claims["sub"]:
             raise ValueError("登录的 Google 账号与原授权账号不一致")
-        if GOOGLE_SCOPE not in tokens.get("scope", "").split():
-            raise ValueError("尚未授予 Google Cloud 模型调用权限")
+        scopes = tokens.get("scope", "").split()
+        if not GOOGLE_SCOPES.issubset(scopes):
+            raise ValueError("尚未授予 Google Cloud 和 Gemini 模型调用权限")
         previous = record["account"]
         refresh_token = tokens.get("refresh_token")
         if (
@@ -307,6 +312,7 @@ class OAuthManager:
             and previous["subject"] == claims["sub"]
             and previous["client_id"] == client_id
             and previous["project_id"] == self.settings.google_project_id
+            and GOOGLE_SCOPES.issubset(previous.get("scopes", []))
         ):
             refresh_token = previous.get("refresh_token")
         if not tokens.get("access_token") or not refresh_token:
@@ -318,6 +324,7 @@ class OAuthManager:
             "email": claims.get("email", ""),
             "access_token": tokens["access_token"],
             "refresh_token": refresh_token,
+            "scopes": scopes,
             "expires_at": time.time() + int(tokens.get("expires_in", 3600)),
         }
         with FileLock(str(self.root / "google-account.lock")):
@@ -329,6 +336,8 @@ class OAuthManager:
             account = self.google_account()
             if not account:
                 return ""
+            if not GOOGLE_SCOPES.issubset(account.get("scopes", [])):
+                raise ConfigurationError("Gemini 授权权限不足，请重新授权")
             if (
                 account["client_id"] != self.settings.google_oauth_client_id
                 or account["project_id"] != self.settings.google_project_id

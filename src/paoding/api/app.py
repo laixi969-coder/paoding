@@ -1,4 +1,5 @@
 import hmac
+import logging
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -12,6 +13,8 @@ from paoding.core.errors import ConfigurationError, Conflict, PaodingError
 from paoding.domain.schemas import FeedbackRequest, IngestRequest
 from paoding.services.runtime import Runtime
 from paoding.storage.tables import AtomElement, EvolutionLog, Job, KnowledgeNode, WatchedAccount
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(runtime=None):
@@ -322,12 +325,15 @@ def create_app(runtime=None):
     @router.get("/models/providers", tags=["models"])
     def custom_providers():
         from paoding.models.custom import PRESETS, custom_public
+        from paoding.models.oauth import GOOGLE_SCOPES
 
         config = rt.gateway.config()
         return {
             "providers": custom_public(rt.settings),
             "chatgpt_connected": bool(oauth.account()),
-            "gemini_google_connected": bool(oauth.google_account()),
+            "gemini_google_connected": GOOGLE_SCOPES.issubset(
+                (oauth.google_account() or {}).get("scopes", [])
+            ),
             "routes": {
                 kind: [r.model_dump() for r in routes] for kind, routes in config.routes.items()
             },
@@ -435,7 +441,11 @@ def create_app(runtime=None):
             )
             destination = "/settings?oauth=" + provider
             message = "授权完成，正在返回设置页面。"
-        except Exception:
+        except Exception as exc:
+            # Never log the callback URL, authorization code, tokens, or exception text:
+            # upstream HTTP errors can include sensitive request details.
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            logger.warning("OAuth callback failed: type=%s status=%s", type(exc).__name__, status)
             destination = "/settings?oauth=failed"
             message = "授权未完成，请返回设置页面重试。"
         html = f'<meta charset="utf-8"><p>{message}</p><script>history.replaceState(null,"","/settings");location.replace("{destination}")</script>'
