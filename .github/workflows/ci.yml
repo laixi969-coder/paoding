@@ -1,0 +1,46 @@
+name: verify
+on: [push, pull_request]
+jobs:
+  portable:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Install FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+      - run: uv run ruff check src tests migrations
+      - run: uv run ruff format --check src tests migrations
+      - run: uv run pytest -q -m "not postgres"
+      - run: uv run paoding demo
+      - run: uv build
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: paoding
+          POSTGRES_PASSWORD: paoding
+          POSTGRES_DB: paoding_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U paoding -d paoding_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PAODING_TEST_POSTGRES_URL: postgresql+psycopg://paoding:paoding@localhost:5432/paoding_test
+      PAODING_DATABASE_URL: postgresql+psycopg://paoding:paoding@localhost:5432/paoding_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run pytest -q -m postgres
+      - run: uv run alembic check

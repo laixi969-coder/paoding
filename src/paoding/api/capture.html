@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>庖丁 · 收录页面</title>
+<style>
+body{font:16px/1.6 system-ui,sans-serif;background:#f6f5f1;color:#252923;max-width:620px;margin:10vh auto;padding:24px}
+h1{font-size:32px;margin-bottom:4px}label{display:block;margin-top:18px}input,textarea,button{box-sizing:border-box;width:100%;padding:12px;font:inherit;border:1px solid #b8bcb3;border-radius:8px}
+button{margin-top:22px;background:#254f39;color:white;cursor:pointer}button:disabled{opacity:.5}#status{white-space:pre-wrap;margin-top:24px}small{color:#667061}
+</style>
+<h1>庖丁</h1><p>把当前页面收入知识库。</p>
+<form id="capture">
+<label>页面标题<input id="title" maxlength="300"></label>
+<label>链接<input id="url" type="url" required></label>
+<label>拆解要求<textarea id="instruction" maxlength="2000" placeholder="例如：只拆配色与版式"></textarea></label>
+<label>访问令牌<input id="token" type="password" autocomplete="off" placeholder="本机未设置令牌时可留空"></label>
+<label><input style="width:auto" id="remember" type="checkbox"> 在此浏览器保存令牌</label>
+<button id="submit">收录</button></form><div id="status" role="status" aria-live="polite"></div>
+<p><small>关闭此页面后，后台会继续处理。</small></p>
+<script>
+const $=id=>document.getElementById(id);
+let autoCapture=false;
+const authRequired=__PAODING_AUTH_REQUIRED__;
+try { const source=JSON.parse(decodeURIComponent(location.hash.slice(1))); $('url').value=source.url||''; $('title').value=source.title||''; autoCapture=source.auto===true; } catch {}
+history.replaceState(null,'',location.pathname);
+$('token').value=localStorage.getItem('paoding-token')||'';
+$('capture').onsubmit=async event=>{event.preventDefault();$('submit').disabled=true;$('status').textContent='正在收录…';
+try{const headers={'Content-Type':'application/json'}; if($('token').value) headers.Authorization='Bearer '+$('token').value;
+const response=await fetch('/api/v1/ingest',{method:'POST',headers,body:JSON.stringify({url:$('url').value,title:$('title').value,instruction:$('instruction').value})});
+const result=await response.json(); if(!response.ok) throw new Error(result.error?.message||result.detail||'收录失败');
+if($('remember').checked)localStorage.setItem('paoding-token',$('token').value);
+$('status').textContent='🔪 已接单\n任务：'+result.job_id;
+}catch(error){$('status').textContent=String(error.message);}finally{$('submit').disabled=false;}};
+if(autoCapture && $('url').value && (!authRequired || $('token').value)) $('capture').requestSubmit();
+</script></html>

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "paoding-engine"
+version = "0.2.0"
+description = "Local-first multimodal knowledge engine"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.115,<1", "uvicorn[standard]>=0.32,<1",
+  "pydantic-settings>=2.7,<3", "sqlalchemy>=2.0.36,<2.1",
+  "psycopg[binary]>=3.2,<4", "alembic>=1.14,<2", "pgvector>=0.3,<1",
+  "httpx>=0.28,<1", "typer>=0.15,<1", "fastmcp>=2.12,<3",
+  "beautifulsoup4>=4.12,<5", "markdownify>=0.14,<2",
+  "pillow>=11,<13", "pypdf>=5,<7", "watchdog>=6,<7",
+  "apscheduler>=3.11,<4", "pyyaml>=6,<7", "colorgram.py>=1.2,<2",
+  "python-dotenv>=1,<2", "pyperclip>=1.9,<2",
+  "cryptography>=44,<51", "defusedxml>=0.7,<1", "feedparser>=6,<7",
+  "yt-dlp>=2025.1", "gallery-dl>=1.28,<2",
+  "PyJWT[crypto]>=2.10,<3", "filelock>=3.16,<4",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-cov>=6,<8", "ruff>=0.11,<1"]
+
+[project.scripts]
+paoding = "paoding.cli:app"
+paoding-server = "paoding.api.app:serve"
+paoding-mcp = "paoding.mcp:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/paoding"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"migrations" = "paoding/_migrations"
+"config/models.yaml" = "paoding/_defaults/models.yaml"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["postgres: requires PAODING_TEST_POSTGRES_URL"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B008"]

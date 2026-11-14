@@ -1,0 +1,42 @@
+# IDs below are editable starting points, not claims about the latest model.
+# models sync discovers available IDs; it NEVER silently promotes an unknown model.
+providers:
+  deepseek:
+    protocol: openai
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+  qwen:
+    protocol: qwen
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: QWEN_API_KEY
+  doubao:
+    protocol: doubao
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: DOUBAO_API_KEY
+  gemini:
+    protocol: gemini
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    api_key_env: GEMINI_API_KEY
+  anthropic:
+    protocol: anthropic
+    base_url: https://api.anthropic.com/v1
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    protocol: openai
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+routes:
+  text:
+    - {provider: deepseek, model: deepseek-chat}
+    - {provider: qwen, model: qwen-plus}
+    - {provider: openai, model: gpt-4.1}
+    - {provider: gemini, model: gemini-2.5-pro}
+  image:
+    - {provider: qwen, model: qwen-vl-max-latest}
+    - {provider: anthropic, model: claude-sonnet-4-5}
+    - {provider: gemini, model: gemini-2.5-pro}
+  video:
+    - {provider: gemini, model: gemini-2.5-pro}
+    - {provider: qwen, model: qwen-vl-max-latest}
+    # Add your actual Doubao model/endpoint ID; its native video_url protocol is supported.
+    # - {provider: doubao, model: YOUR_DOUBAO_ENDPOINT_ID}

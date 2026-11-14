@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+.env.*
+!.env.example
+data/
+PaoDing_Vault/
+PaoDing_Drop/
+*.db
+*.db-*
+dist/
+*.egg-info/

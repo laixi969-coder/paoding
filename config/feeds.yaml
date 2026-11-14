@@ -1,0 +1,7 @@
+# Map creator profile URLs to the RSS service you operate. Do not put API keys here.
+# WeWe-RSS example: replace MP_ID with the feed ID shown by your own WeWe-RSS instance.
+feeds: {}
+#  "https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=YOUR_BIZ":
+#    feed_url: "http://127.0.0.1:4000/feeds/MP_ID.xml"
+#  "https://x.com/CREATOR":
+#    feed_url: "http://127.0.0.1:1200/twitter/user/CREATOR"
