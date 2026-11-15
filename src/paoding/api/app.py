@@ -1,14 +1,17 @@
 import hmac
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import String, cast, func, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from paoding import __version__
+from paoding.api.workspace import workspace_page
 from paoding.core.errors import ConfigurationError, Conflict, PaodingError
 from paoding.domain.schemas import FeedbackRequest, IngestRequest
 from paoding.services.runtime import Runtime
@@ -43,70 +46,32 @@ def create_app(runtime=None):
         description="Local-first 多模态知识引擎。异步任务状态与 Vault 同步状态独立可观测。",
     )
     app.state.runtime = rt
+    app.mount(
+        "/assets",
+        StaticFiles(directory=Path(__file__).with_name("static")),
+        name="workspace-assets",
+    )
 
     @app.get("/", include_in_schema=False)
     @app.get("/library", include_in_schema=False)
     def library_page():
-        from pathlib import Path
-
-        from fastapi.responses import HTMLResponse
-
-        return HTMLResponse(
-            Path(__file__).with_name("library.html").read_text(encoding="utf-8"),
-            headers={
-                "Cache-Control": "no-store",
-                "X-Frame-Options": "DENY",
-                "Referrer-Policy": "no-referrer",
-            },
-        )
+        return workspace_page("library")
 
     @app.get("/guide", include_in_schema=False)
     def guide_page():
-        from pathlib import Path
-
-        from fastapi.responses import HTMLResponse
-
-        return HTMLResponse(
-            Path(__file__).with_name("guide.html").read_text(encoding="utf-8"),
-            headers={
-                "Cache-Control": "no-store",
-                "X-Frame-Options": "DENY",
-                "Referrer-Policy": "no-referrer",
-            },
-        )
+        return workspace_page("guide")
 
     @app.get("/capture", include_in_schema=False)
     def capture():
-        from pathlib import Path
-
-        from fastapi.responses import HTMLResponse
-
-        html = Path(__file__).with_name("capture.html").read_text(encoding="utf-8")
-        html = html.replace(
-            "__PAODING_AUTH_REQUIRED__",
-            "true" if rt.settings.api_token.get_secret_value() else "false",
-        )
-        return HTMLResponse(
-            html,
-            headers={"Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY"},
+        return workspace_page(
+            "capture", auth_required=bool(rt.settings.api_token.get_secret_value())
         )
 
     @app.get("/settings", include_in_schema=False)
     def settings_page(request: Request):
-        from pathlib import Path
-
-        from fastapi.responses import HTMLResponse
-
         if request.url.hostname not in {"localhost", "127.0.0.1", "::1"}:
-            raise HTTPException(403, "设置页面仅限本机访问")
-        return HTMLResponse(
-            Path(__file__).with_name("settings.html").read_text(encoding="utf-8"),
-            headers={
-                "Cache-Control": "no-store",
-                "X-Frame-Options": "DENY",
-                "Referrer-Policy": "no-referrer",
-            },
-        )
+            return workspace_page("settings", local_only=True)
+        return workspace_page("settings")
 
     @app.exception_handler(PaodingError)
     async def domain_error(request, exc):

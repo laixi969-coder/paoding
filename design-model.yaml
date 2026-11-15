@@ -1,0 +1,78 @@
+meta:
+  name: 庖丁知识工作台
+  register: product
+  scope: 四个工作台页面的手机导航与视觉一致性
+  design_read: 本地知识工作台 · 温和、克制 · SPECTACLE=1 · 无 hero engine
+
+dials:
+  soul: 5
+  spectacle: 1
+  density: 7
+
+color:
+  background:
+    name: 纸色
+    hex: "#f5f5ee"
+    role: 手机页面背景，沿用现有品牌，不切换主题
+  surface:
+    name: 浅纸色
+    hex: "#fffef9"
+    role: 卡片及表单底色，保持与背景的层次
+  ink:
+    name: 墨绿
+    hex: "#243b2d"
+    role: 正文和标题，正文对比度至少 7:1
+  muted:
+    name: 苔绿
+    hex: "#526756"
+    role: 辅助文字，在纸色与浅绿底上保持至少 4.5:1
+  accent:
+    name: 松绿
+    hex: "#315b42"
+    role: 唯一操作主色，沿用现有品牌
+  on_accent:
+    name: 月白绿
+    hex: "#eff4e9"
+    role: 深色按钮与导航文字，避免纯白
+  header:
+    name: 深林绿
+    hex: "#1e392d"
+    role: 主导航背景
+  border:
+    value: "rgba(49,91,66,.16)"
+    role: 非交互内容分隔；输入框使用更深的边界
+  control_border:
+    name: 灰松绿
+    hex: "#738a73"
+    role: 输入框和次按钮边界，与纸色及浅绿底保持至少 3:1
+  focus:
+    name: 叶绿
+    hex: "#4f785c"
+    role: 正文区域焦点环；深色导航使用浅色焦点环
+
+type:
+  display: Songti SC
+  display_reason: 保留庖丁现有中文书卷气，只用于标题
+  body: PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif
+  body_reason: 本地系统字族，保证中文控件可读性且无远程字体依赖
+  mobile_heading_px: 30
+  mobile_heading_leading: 1.35
+  mobile_body_px: 15
+  mobile_input_px: 16
+  numeric: tabular-nums
+
+components:
+  navigation: 知识库、收录内容、接入指南、模型设置，顺序固定
+  navigation_height_px: 64
+  navigation_current: aria-current=page，并使用背景与下划线
+  local_navigation: 吸顶在主导航下方；锚点留出两层导航的空间
+  touch_target_min_px: 44
+  radius_px: 3
+  spacing_px: [4, 8, 12, 16, 20, 24, 32]
+  mobile_breakpoint_px: 720
+  source: src/paoding/api/static/workspace.css
+
+substrate:
+  grain: 静态 SVG 纸面颗粒，透明度 0.025，不覆盖内容或拦截触控
+  motion: 仅点击反馈，无装饰动画，遵循 prefers-reduced-motion
+  omissions: 工具界面无 hero engine、营销插图、深色主题切换

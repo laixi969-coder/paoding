@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from fastmcp import Client
 from pydantic import SecretStr
@@ -117,3 +119,25 @@ def test_library_browses_searches_filters_and_detail(rt, source):
         detail = client.get("/api/v1/nodes/" + node_id).json()
         assert detail["cross_domain_dna"]["universal_principle"]
         assert detail["atoms"] and detail["platform"] == "youtube"
+
+
+@pytest.mark.parametrize("page", ["library", "capture", "guide", "settings"])
+def test_workspace_pages_share_navigation_and_load_styles(rt, page):
+    with TestClient(create_app(rt), base_url="http://127.0.0.1:8010") as client:
+        response = client.get(f"/{page}")
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-store"
+        assert "__PAODING_" not in response.text
+        document = BeautifulSoup(response.text, "html.parser")
+        navigation = document.select_one(".workspace-mobile-nav")
+        assert [a["href"] for a in navigation.select("a")] == [
+            "/library",
+            "/capture",
+            "/guide",
+            "/settings",
+        ]
+        assert [a["href"] for a in navigation.select('[aria-current="page"]')] == [f"/{page}"]
+        assert document.select_one("#main-content") is not None
+        stylesheet = client.get(document.select_one('link[rel="stylesheet"]')["href"])
+        assert stylesheet.status_code == 200
+        assert stylesheet.headers["Content-Type"].startswith("text/css")

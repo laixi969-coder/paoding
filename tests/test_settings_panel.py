@@ -74,5 +74,11 @@ def test_settings_write_does_not_return_secrets_and_applies_to_worker(rt, monkey
 
 def test_settings_page_restricted_to_local_host(rt):
     with TestClient(create_app(rt), base_url="http://example.com") as client:
-        assert client.get("/settings").status_code == 403
+        response = client.get("/settings")
+        assert response.status_code == 403
+        assert response.headers["Content-Type"].startswith("text/html")
+        assert "配置模型" in response.text
+        assert 'href="/guide#mobile"' in response.text
+        assert 'aria-current="page"' in response.text
+        assert 'id="form"' not in response.text
         assert client.get("/api/v1/settings").status_code == 403
