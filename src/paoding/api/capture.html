@@ -1,33 +1,63 @@
 <!doctype html>
-<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>庖丁 · 收录页面</title>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>收录内容 · 庖丁</title>
 <style>
-body{font:16px/1.6 system-ui,sans-serif;background:#f6f5f1;color:#252923;max-width:620px;margin:10vh auto;padding:24px}
-h1{font-size:32px;margin-bottom:4px}label{display:block;margin-top:18px}input,textarea,button{box-sizing:border-box;width:100%;padding:12px;font:inherit;border:1px solid #b8bcb3;border-radius:8px}
-button{margin-top:22px;background:#254f39;color:white;cursor:pointer}button:disabled{opacity:.5}#status{white-space:pre-wrap;margin-top:24px}small{color:#667061}
+:root{color-scheme:light;--ink:#243b2d;--muted:#617468;--line:#dce5da;--paper:#f5f5ee;--green:#315b42}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.75 "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}a{color:inherit}button,input,textarea{font:inherit}button,a,input,textarea,summary{touch-action:manipulation}a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid #699b73;outline-offset:3px}[hidden]{display:none!important}header{background:#1e392d;color:#eff4e9;padding:16px max(24px,calc((100vw - 900px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{font:700 25px "Songti SC",serif;letter-spacing:.18em;text-decoration:none;white-space:nowrap}.toplinks{display:flex;gap:20px}.toplinks a,.brand{display:inline-flex;align-items:center;min-height:44px}.toplinks a{font-size:13px;text-decoration:none}main{max-width:760px;margin:auto;padding:44px 24px 70px}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--muted)}h1{font:700 clamp(30px,5vw,42px)/1.3 "Songti SC",serif;margin:12px 0}main>p{color:var(--muted);margin:0 0 28px}.capture-form{background:#fffef9;border:1px solid var(--line);padding:28px}.field{display:block;margin-bottom:22px;font-weight:600}.optional{font-size:12px;color:var(--muted);font-weight:400;margin-left:8px}.help{display:block;color:var(--muted);font-size:12px;font-weight:400;margin:6px 0 0}input:not([type=checkbox]),textarea{display:block;width:100%;min-width:0;padding:12px;border:1px solid #b9c8b8;background:#fffefb;border-radius:3px;color:var(--ink);margin-top:8px;min-height:48px;font-weight:400}textarea{min-height:112px;resize:vertical}details{border-top:1px solid var(--line);padding-top:10px}summary{min-height:44px;cursor:pointer;overflow-wrap:anywhere}.auth-fields{padding-top:8px}.remember{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--muted);font-size:13px}.remember input{width:20px;height:20px;flex-shrink:0;accent-color:var(--green)}button,.button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:11px 20px;border:0;border-radius:3px;background:var(--green);color:white;cursor:pointer;text-decoration:none}button:disabled{opacity:.55;cursor:default}#submit{width:100%;margin-top:24px}.secondary{background:transparent;border:1px solid #9fb6a2;color:var(--green)}.status{margin-top:22px;padding:22px;background:#e9efe5;border:1px solid #c5d7c3;overflow-wrap:anywhere;scroll-margin-top:20px}.status.error{background:#fff3ed;border-color:#e0bfae}.status.error h2{color:#973f29}.status h2{font:700 22px/1.4 "Songti SC",serif;margin:0 0 8px}.status p{margin:6px 0;color:#4e6555;white-space:pre-wrap}.status.error p{color:#873d2b}.job-id{display:block;font:12px/1.7 ui-monospace,monospace;color:var(--muted)}.next{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.footnote{color:var(--muted);font-size:12px;margin-top:18px}
+@media(max-width:720px){header{padding:10px 16px;gap:12px}.brand{font-size:23px}.toplinks{gap:12px}main{padding:28px 20px 48px}.capture-form{padding:20px}.field{margin-bottom:20px}input:not([type=checkbox]),textarea{font-size:16px}.next>*{flex:1 1 auto}.status{padding:20px}.toplinks a{font-size:12px}}@media(max-width:360px){main{padding-left:16px;padding-right:16px}.capture-form{padding:16px}.toplinks{gap:9px}}
 </style>
-<a href="/library">← 返回知识库</a><h1>庖丁</h1><p>把当前页面收入知识库。</p>
-<form id="capture">
-<label>页面标题<input id="title" maxlength="300"></label>
-<label>链接<input id="url" type="url" required></label>
-<label>拆解要求<textarea id="instruction" maxlength="2000" placeholder="例如：只拆配色与版式"></textarea></label>
-<label>访问令牌<input id="token" type="password" autocomplete="off" placeholder="本机未设置令牌时可留空"></label>
-<label><input style="width:auto" id="remember" type="checkbox"> 在此浏览器保存令牌</label>
-<button id="submit">收录</button></form><div id="status" role="status" aria-live="polite"></div>
-<p><small>关闭此页面后，后台会继续处理。</small></p>
+</head>
+<body>
+<header><a class="brand" href="/library">庖丁</a><nav class="toplinks" aria-label="主导航"><a href="/library">知识库</a><a href="/guide">接入指南</a><a href="/settings">模型设置</a></nav></header>
+<main><div class="eyebrow">CAPTURE / 收录内容</div><h1>把好内容，收入知识库。</h1><p>粘贴文章、图片或视频的链接，让庖丁为你拆解。</p>
+<form id="capture" class="capture-form">
+<label class="field" for="url">内容链接<input id="url" type="url" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" enterkeyhint="next" required placeholder="https://…" aria-describedby="url-help"><span id="url-help" class="help">支持以 http:// 或 https:// 开头的网页链接。</span></label>
+<label class="field" for="title">页面标题<span class="optional">选填</span><input id="title" maxlength="300" placeholder="为这条内容起个名字"></label>
+<label class="field" for="instruction">拆解要求<span class="optional">选填</span><textarea id="instruction" maxlength="2000" placeholder="例如：只拆配色与版式"></textarea></label>
+<details id="auth-options"><summary>访问令牌 <span id="auth-hint" class="optional"></span></summary><div class="auth-fields"><label class="field" for="token">庖丁访问令牌<input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="未设置访问令牌时可留空"><span class="help">这是庖丁的访问令牌，不是模型服务商的 API Key。</span></label><label class="remember" for="remember"><input id="remember" type="checkbox">在此浏览器保存令牌</label></div></details>
+<button id="submit" type="submit">收录内容</button></form>
+<section id="status" class="status" role="status" aria-live="polite" hidden></section>
+<p class="footnote">提交成功后，即使关闭此页，后台也会继续处理。实际拆解需要 Worker 运行。</p></main>
 <script>
 const $=id=>document.getElementById(id);
-let autoCapture=false;
 const authRequired=__PAODING_AUTH_REQUIRED__;
-try { const source=JSON.parse(decodeURIComponent(location.hash.slice(1))); $('url').value=source.url||''; $('title').value=source.title||''; autoCapture=source.auto===true; } catch {}
+let autoCapture=false,busy=false,pendingPayload='',requestKey='',acceptedPayload='';
+try{const source=JSON.parse(decodeURIComponent(location.hash.slice(1)));$('url').value=source.url||'';$('title').value=source.title||'';autoCapture=source.auto===true}catch{}
 history.replaceState(null,'',location.pathname);
-$('token').value=localStorage.getItem('paoding-token')||'';
-$('capture').onsubmit=async event=>{event.preventDefault();$('submit').disabled=true;$('status').textContent='正在收录…';
-try{const headers={'Content-Type':'application/json'}; if($('token').value) headers.Authorization='Bearer '+$('token').value;
-const response=await fetch('/api/v1/ingest',{method:'POST',headers,body:JSON.stringify({url:$('url').value,title:$('title').value,instruction:$('instruction').value})});
-const result=await response.json(); if(!response.ok) throw new Error(result.error?.message||result.detail||'收录失败');
-if($('remember').checked)localStorage.setItem('paoding-token',$('token').value);
-$('status').textContent='🔪 已接单\n任务：'+result.job_id;
-}catch(error){$('status').textContent=String(error.message);}finally{$('submit').disabled=false;}};
-if(autoCapture && $('url').value && (!authRequired || $('token').value)) $('capture').requestSubmit();
-</script></html>
+const storedToken=localStorage.getItem('paoding-token')||'';
+$('token').value=storedToken;$('remember').checked=!!storedToken;
+$('auth-options').open=authRequired&&!storedToken;
+$('auth-hint').textContent=storedToken?'已从此浏览器读取':authRequired?'需要填写':'按需填写';
+$('remember').onchange=()=>{if(!$('remember').checked)localStorage.removeItem('paoding-token')};
+$('url').oninput=()=>$('url').setCustomValidity('');
+function payload(){return JSON.stringify({url:$('url').value.trim(),title:$('title').value.trim(),instruction:$('instruction').value.trim()})}
+function showStatus(kind,title,message){const box=$('status');box.hidden=false;box.className='status'+(kind==='error'?' error':'');box.replaceChildren();const heading=document.createElement('h2');heading.textContent=title;heading.tabIndex=-1;const text=document.createElement('p');text.textContent=message;box.append(heading,text);return box}
+function focusStatus(){const heading=$('status').querySelector('h2');heading.focus({preventScroll:true});$('status').scrollIntoView({block:'nearest'})}
+function nextCapture(){acceptedPayload='';pendingPayload='';requestKey='';$('url').value='';$('title').value='';$('status').hidden=true;$('submit').disabled=false;$('url').focus()}
+$('capture').addEventListener('input',()=>{if(!busy)$('submit').disabled=payload()===acceptedPayload});
+$('capture').onsubmit=async event=>{
+  event.preventDefault();if(busy||payload()===acceptedPayload)return;
+  try{const parsed=new URL($('url').value.trim());if(!['http:','https:'].includes(parsed.protocol))throw Error()}catch{$('url').setCustomValidity('请填写以 http:// 或 https:// 开头的完整链接。');$('url').reportValidity();return}
+  if(authRequired&&!$('token').value.trim()){$('auth-options').open=true;showStatus('error','请填写访问令牌','填写庖丁访问令牌后再收录。');$('token').focus();return}
+  busy=true;$('submit').disabled=true;$('submit').textContent='正在提交…';document.activeElement?.blur();$('capture').setAttribute('aria-busy','true');
+  const body=payload();if(body!==pendingPayload){pendingPayload=body;requestKey=crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),value=>value.toString(16).padStart(2,'0')).join('')}
+  showStatus('pending','正在收录…','请稍候，正在提交内容。');
+  try{
+    const submittedToken=$('token').value.trim(),headers={'Content-Type':'application/json','Idempotency-Key':requestKey};if(submittedToken)headers.Authorization='Bearer '+submittedToken;
+    const response=await fetch('/api/v1/ingest',{method:'POST',headers,body,signal:AbortSignal.timeout(30000)});
+    if(response.status===401){$('auth-options').open=true;throw Error('访问令牌无效或尚未填写，请检查后重试。')}
+    let result;try{result=await response.json()}catch{throw Error('服务响应无法读取，请稍后重试。')}
+    if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:result.error?.message||'收录失败，请检查链接和服务状态。');
+    if(!result.job_id)throw Error('服务未返回任务编号，请稍后重试。');
+    acceptedPayload=body;if($('remember').checked&&$('token').value.trim()===submittedToken)localStorage.setItem('paoding-token',submittedToken);
+    const box=showStatus('success','已接单，等待后台处理','处理完成后，知识卡片会出现在知识库。可以在最近任务查看进度。');
+    const id=document.createElement('code');id.className='job-id';id.textContent='任务：'+result.job_id;box.append(id);
+    const actions=document.createElement('div');actions.className='next';const link=document.createElement('a');link.className='button';link.href='/library#recent';link.textContent='查看任务进度';
+    const next=document.createElement('button');next.className='secondary';next.type='button';next.textContent='收录下一条';next.onclick=nextCapture;actions.append(link,next);box.append(actions);focusStatus();
+  }catch(error){showStatus('error','暂时未能收录',error.name==='TimeoutError'?'提交超时，请重试；相同内容不会因本次重试而重复创建任务。':error instanceof TypeError?'无法连接庖丁，请检查网络或服务后重试。':error.message);focusStatus()}
+  finally{busy=false;$('capture').setAttribute('aria-busy','false');$('submit').textContent='收录内容';$('submit').disabled=payload()===acceptedPayload}
+};
+if(autoCapture&&$('url').value&&(!authRequired||storedToken))$('capture').requestSubmit();
+</script>
+</body></html>
