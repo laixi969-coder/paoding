@@ -29,7 +29,7 @@ def test_full_ingest_snapshot_export_retrieval_feedback(rt, source):
         node = session.get(KnowledgeNode, job.result["node_id"])
         assert node.vault_status == "synced"
         assert Path(node.vault_path).exists()
-        assert "cross_domain_dna" in Path(node.vault_path).read_text()
+        assert "cross_domain_dna" in Path(node.vault_path).read_text(encoding="utf-8")
         assert node.analysis["evidence"]["basis"] == "demo"
         assert session.scalar(select(func.count()).select_from(KnowledgeNode)) == 1
     atoms = rt.library.fetch_atoms("sop", ["demo"], "xiaohongshu", 10)

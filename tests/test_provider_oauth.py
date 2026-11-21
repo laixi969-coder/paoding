@@ -1,7 +1,6 @@
 import base64
 import hashlib
 import json
-import os
 import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -9,6 +8,7 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import jwt
 import pytest
+from conftest import assert_private_file
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
@@ -54,7 +54,7 @@ def test_custom_provider_add_manual_model_select_and_test_one(rt, tmp_path, monk
         )
         assert response.status_code == 200 and response.json()["configured"]
         assert "secret-key" not in client.get("/api/v1/models/providers").text
-        assert os.stat(".env").st_mode & 0o077 == 0
+        assert_private_file(Path(".env"))
         assert (
             client.post(
                 "/api/v1/models/providers",
@@ -118,8 +118,10 @@ def test_openrouter_pkce_one_time_state_and_private_key_storage(rt, tmp_path, mo
         .decode()
         == query["code_challenge"][0]
     )
-    assert "sk-or-test-secret" not in (rt.settings.data_dir / "custom_providers.json").read_text()
-    assert "sk-or-test-secret" in Path(".env").read_text()
+    assert "sk-or-test-secret" not in (rt.settings.data_dir / "custom_providers.json").read_text(
+        encoding="utf-8"
+    )
+    assert "sk-or-test-secret" in Path(".env").read_text(encoding="utf-8")
     with pytest.raises(ValueError):
         manager.finish(state, cookie, "code")
 
@@ -166,7 +168,7 @@ def test_chatgpt_official_login_validation_and_single_model_stream(rt, tmp_path,
     state_data["nonce"] = query["nonce"][0]
     assert manager.finish(query["state"][0], cookie, "code", "oaiapp_123") == "chatgpt"
     assert manager.chatgpt_access() == "access-test"
-    assert os.stat(rt.settings.data_dir / "oauth" / "chatgpt-account.json").st_mode & 0o077 == 0
+    assert_private_file(rt.settings.data_dir / "oauth" / "chatgpt-account.json")
     calls = []
 
     def inference(request):
@@ -307,6 +309,7 @@ def test_chatgpt_refresh_rotates_token_without_changing_identity(rt):
     assert manager.chatgpt_access() == "new-access"
     assert manager.chatgpt_access() == "new-access" and len(calls) == 1
     assert manager.account()["refresh_token"] == "new-refresh"
+    assert_private_file(rt.settings.data_dir / "oauth" / "chatgpt-account.json")
     assert manager.account()["subject"] == "user-1"
 
 
@@ -366,6 +369,7 @@ def test_google_oauth_and_gemini_model_use_bearer_project_header(rt, tmp_path, m
     nonce["value"] = params["nonce"][0]
     assert manager.finish(params["state"][0], cookie, "google-code") == "gemini_google"
     assert manager.google_access() == "google-access"
+    assert_private_file(rt.settings.data_dir / "oauth" / "google-account.json")
     requests = []
 
     def gemini(request):

@@ -1,3 +1,5 @@
+import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -8,6 +10,37 @@ from paoding.core.config import Settings
 from paoding.services.runtime import Runtime
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def assert_private_file(path: Path):
+    if os.name != "nt":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+        return
+
+    import ntsecuritycon
+    import win32api
+    import win32con
+    import win32security
+
+    descriptor = win32security.GetNamedSecurityInfo(
+        str(path), win32security.SE_FILE_OBJECT, win32security.DACL_SECURITY_INFORMATION
+    )
+    control, _ = descriptor.GetSecurityDescriptorControl()
+    assert control & win32security.SE_DACL_PROTECTED
+    acl = descriptor.GetSecurityDescriptorDacl()
+    assert acl is not None and acl.GetAceCount() == 1
+    (kind, flags), access, sid = acl.GetAce(0)
+    assert (kind, flags, access) == (
+        win32security.ACCESS_ALLOWED_ACE_TYPE,
+        0,
+        ntsecuritycon.FILE_ALL_ACCESS,
+    )
+    token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+    try:
+        user_sid = win32security.GetTokenInformation(token, win32security.TokenUser)[0]
+        assert sid == user_sid
+    finally:
+        token.Close()
 
 
 def migrate_test_database(url):

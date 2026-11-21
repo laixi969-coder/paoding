@@ -2,12 +2,12 @@
 
 import os
 import threading
-from pathlib import Path
 
-from dotenv import dotenv_values, set_key
+from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field
 
 from paoding.core.config import Settings
+from paoding.storage.credentials import update_dotenv
 
 LOCK = threading.Lock()
 
@@ -133,13 +133,10 @@ def update_values(values, settings=None):
                 ):
                     raise ValueError("模型路由格式应为 服务商:模型ID，例如 qwen:qwen-plus")
     with LOCK:
-        path = Path(".env")
-        path.touch(mode=0o600, exist_ok=True)
-        os.chmod(path, 0o600)
-        for name, value in values.items():
-            # Blank secret fields mean retain the existing credential.
-            if value or not FIELDS[name][2]:
-                set_key(str(path), name, value, quote_mode="always")
+        # Blank secret fields retain the existing credential.
+        update_dotenv(
+            {name: value for name, value in values.items() if value or not FIELDS[name][2]}
+        )
 
 
 def refresh_settings(current):

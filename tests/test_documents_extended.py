@@ -66,10 +66,18 @@ def test_mineru_upload_poll_archive_and_cache(rt, tmp_path):
     assert len(requests) == 3  # Retry/repeated import reuses the completed artifact.
 
 
-@pytest.mark.parametrize("name", ["../escape.md", "/absolute.md", "folder\\escape.md"])
+@pytest.mark.parametrize("name", ["../escape.md", "/absolute.md"])
 def test_document_archive_cannot_escape_root(rt, tmp_path, name):
     with pytest.raises(SourceError, match="Unsafe path"):
         DocumentExtractor(rt.settings).unpack(document_zip(name), tmp_path / "input.pdf")
+
+
+def test_document_archive_requires_forward_slashes(rt, tmp_path):
+    # Supply the stored spelling directly so the ZIP writer produces the same input on every OS.
+    member = zipfile.ZipInfo()
+    member.filename = r"folder\notes.md"
+    with pytest.raises(SourceError, match="Unsafe path"):
+        DocumentExtractor(rt.settings).unpack(document_zip(member), tmp_path / "input.pdf")
 
 
 def test_web_readers_real_request_contracts(rt):

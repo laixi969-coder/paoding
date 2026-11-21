@@ -1,6 +1,7 @@
 import json
 import platform
 import subprocess
+import sys
 from pathlib import Path
 
 import typer
@@ -53,7 +54,13 @@ def rebuild_vault():
 
 
 def output(value):
-    typer.echo(json.dumps(value, ensure_ascii=False, indent=2, default=str))
+    document = json.dumps(value, ensure_ascii=False, indent=2, default=str)
+    try:
+        document.encode(getattr(sys.stdout, "encoding", None) or "utf-8")
+    except UnicodeEncodeError:
+        # A redirected Windows stream may use a code page that cannot represent the result.
+        document = json.dumps(value, ensure_ascii=True, indent=2, default=str)
+    typer.echo(document)
 
 
 def migrate(settings):

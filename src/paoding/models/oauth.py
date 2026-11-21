@@ -18,6 +18,7 @@ from filelock import FileLock
 
 from paoding.core.errors import ConfigurationError, TransientError
 from paoding.models.custom import ProviderInput, custom_key_env, save_custom
+from paoding.storage.credentials import write_private_json
 from paoding.storage.vault import atomic_write
 
 OPENAI_ISSUER = "https://auth.openai.com"
@@ -260,7 +261,7 @@ class OAuthManager:
             "scopes": scopes,
         }
         with FileLock(str(self.root / "chatgpt-account.lock")):
-            atomic_write(self.root / "chatgpt-account.json", json.dumps(account).encode())
+            write_private_json(self.root / "chatgpt-account.json", account)
         return "chatgpt"
 
     def finish_google(self, record, code):
@@ -328,7 +329,7 @@ class OAuthManager:
             "expires_at": time.time() + int(tokens.get("expires_in", 3600)),
         }
         with FileLock(str(self.root / "google-account.lock")):
-            atomic_write(self.root / "google-account.json", json.dumps(account).encode())
+            write_private_json(self.root / "google-account.json", account)
         return "gemini_google"
 
     def google_access(self):
@@ -366,7 +367,7 @@ class OAuthManager:
                 )
                 if tokens.get("refresh_token"):
                     account["refresh_token"] = tokens["refresh_token"]
-                atomic_write(self.root / "google-account.json", json.dumps(account).encode())
+                write_private_json(self.root / "google-account.json", account)
                 return account["access_token"]
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code in {400, 401, 403}:
@@ -405,7 +406,7 @@ class OAuthManager:
                 if tokens.get("id_token"):
                     # Keep the previously verified ID token as identity hint; refresh response is not an identity reauthentication.
                     pass
-                atomic_write(self.root / "chatgpt-account.json", json.dumps(account).encode())
+                write_private_json(self.root / "chatgpt-account.json", account)
                 return account["access_token"]
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code in {400, 401, 403}:

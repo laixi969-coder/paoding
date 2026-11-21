@@ -77,9 +77,9 @@ def test_taxonomy_merge_keeps_aliases_sources_history_and_redirects(rt, source, 
         assert len(logs) == 2
         assert len(logs[-1].document["changes"][0]["merged_categories"]) == 2
     index = rt.settings.vault_dir / "00_Meta_Playbooks_跨界元规则" / "00_分类索引.md"
-    assert "空间层次" in index.read_text()
+    assert "空间层次" in index.read_text(encoding="utf-8")
     old_file = index.parent / "sop" / before[0]["id"] / "index.md"
-    assert "已合并" in old_file.read_text()
+    assert "已合并" in old_file.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("invalid", ["alias", "reference", "count", "double"])

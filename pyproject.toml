@@ -19,6 +19,7 @@ dependencies = [
   "cryptography>=44,<51", "defusedxml>=0.7,<1", "feedparser>=6,<7",
   "yt-dlp>=2025.1", "gallery-dl>=1.28,<2",
   "PyJWT[crypto]>=2.10,<3", "filelock>=3.16,<4",
+  "pywin32>=310; sys_platform == 'win32'",
 ]
 
 [dependency-groups]

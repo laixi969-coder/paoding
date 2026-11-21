@@ -6,10 +6,11 @@ import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from dotenv import dotenv_values, set_key
+from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field
 
 from paoding.core.settings_panel import LOCK
+from paoding.storage.credentials import update_dotenv
 from paoding.storage.vault import atomic_write
 
 BUILTINS = {
@@ -97,10 +98,7 @@ def save_secret(env_name, secret):
         return
     if len(secret) > 4096 or any(ord(c) < 32 for c in secret):
         raise ValueError("API Key 格式无效")
-    path = Path(".env")
-    path.touch(mode=0o600, exist_ok=True)
-    os.chmod(path, 0o600)
-    set_key(str(path), env_name, secret, quote_mode="always")
+    update_dotenv({env_name: secret})
 
 
 def save_custom(settings, item):

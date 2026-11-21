@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import time
 import zipfile
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from paoding.core.errors import ConfigurationError, SourceError, TransientError
 from paoding.ingestion.http import SafeFetcher
@@ -124,8 +124,16 @@ class DocumentExtractor:
             raise SourceError("MinerU returned an invalid archive") from exc
         with archive:
             for info in archive.infolist():
-                path = PurePosixPath(info.filename)
-                if path.is_absolute() or ".." in path.parts or "\\" in info.filename:
+                # ZipInfo.filename has already normalized Windows separators.
+                name = info.orig_filename
+                path = PurePosixPath(name)
+                if (
+                    path.is_absolute()
+                    or ".." in path.parts
+                    or "\\" in name
+                    or "\x00" in name
+                    or PureWindowsPath(name).drive
+                ):
                     raise SourceError("Unsafe path in extraction archive")
                 expanded += info.file_size
                 if expanded > self.settings.max_download_bytes * 3:
@@ -135,6 +143,8 @@ class DocumentExtractor:
                 if path.suffix.lower() not in {".md", ".json", ".png", ".jpg", ".jpeg", ".webp"}:
                     continue
                 target = root.joinpath(*path.parts)
+                if not target.resolve().is_relative_to(root):
+                    raise SourceError("Unsafe path in extraction archive")
                 content = archive.read(info)
                 atomic_write(target, content)
                 assets.append(str(target))
