@@ -1,4 +1,4 @@
-"""Shared, server-rendered workspace navigation for the four mobile pages."""
+"""Shared server-rendered navigation for the workspace pages."""
 
 from pathlib import Path
 
@@ -13,7 +13,7 @@ PAGES = (
 
 
 def workspace_page(
-    page: str, *, auth_required: bool = False, local_only: bool = False
+    page: str, *, auth_required: bool = False, local_only: bool = False, port: int = 8010
 ) -> HTMLResponse:
     links = "".join(
         f'<a href="/{name}"' + (' aria-current="page"' if name == page else "") + f">{label}</a>"
@@ -21,14 +21,16 @@ def workspace_page(
     )
     navigation = (
         '<a class="workspace-skip" href="#main-content">跳到正文</a>'
-        '<header class="workspace-mobile-header">'
+        '<header class="workspace-header">'
         '<a class="workspace-brand" href="/library" aria-label="庖丁，返回知识库">庖丁</a>'
-        f'<nav class="workspace-mobile-nav" aria-label="主导航">{links}</nav></header>'
+        f'<nav class="workspace-nav" aria-label="主导航">{links}</nav></header>'
     )
     template = "settings_local" if local_only else page
     html = Path(__file__).with_name(f"{template}.html").read_text(encoding="utf-8")
-    html = html.replace("__PAODING_MOBILE_NAV__", navigation).replace(
-        "__PAODING_AUTH_REQUIRED__", "true" if auth_required else "false"
+    html = (
+        html.replace("__PAODING_WORKSPACE_NAV__", navigation)
+        .replace("__PAODING_AUTH_REQUIRED__", "true" if auth_required else "false")
+        .replace("__PAODING_PORT__", str(port))
     )
     return HTMLResponse(
         html,

@@ -10,13 +10,14 @@
 <link rel="stylesheet" href="/assets/workspace.css">
 </head>
 <body>
-__PAODING_MOBILE_NAV__
-<header class="desktop-header"><a class="brand" href="/library">庖丁</a><nav class="toplinks" aria-label="主导航"><a href="/library">知识库</a><a href="/guide">接入指南</a><a href="/settings">模型设置</a></nav></header>
-<main id="main-content" tabindex="-1"><div class="eyebrow">CAPTURE / 收录内容</div><h1>把好内容，收入知识库。</h1><p>粘贴文章、图片或视频的链接，让庖丁为你拆解。</p>
+__PAODING_WORKSPACE_NAV__
+<main id="main-content" tabindex="-1"><h1>收录内容</h1><p>粘贴文章、图片或视频链接，处理完成后就能查看知识卡片。创作者主页会加入账号追踪。</p>
 <form id="capture" class="capture-form">
 <label class="field" for="url">内容链接<span class="optional">必填</span><input id="url" type="url" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" enterkeyhint="next" required placeholder="https://…" aria-describedby="url-help"><span id="url-help" class="help">支持以 http:// 或 https:// 开头的网页链接。</span></label>
+<details id="capture-options"><summary>补充标题或拆解要求 <span class="optional">选填</span></summary>
 <label class="field" for="title">页面标题<span class="optional">选填</span><input id="title" maxlength="300" placeholder="为这条内容起个名字"></label>
 <label class="field" for="instruction">拆解要求<span class="optional">选填</span><textarea id="instruction" maxlength="2000" placeholder="例如：只拆配色与版式"></textarea></label>
+</details>
 <details id="auth-options"><summary>访问令牌 <span id="auth-hint" class="optional"></span></summary><div class="auth-fields"><label class="field" for="token">庖丁访问令牌<input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="未设置访问令牌时可留空"><span class="help">这是庖丁的访问令牌，不是模型服务商的 API Key。</span></label><label class="remember" for="remember"><input id="remember" type="checkbox">在此浏览器保存令牌</label></div></details>
 <button id="submit" type="submit">收录内容</button></form>
 <section id="status" class="status" role="status" aria-live="polite" hidden></section>
@@ -25,7 +26,7 @@ __PAODING_MOBILE_NAV__
 const $=id=>document.getElementById(id);
 const authRequired=__PAODING_AUTH_REQUIRED__;
 let autoCapture=false,busy=false,pendingPayload='',requestKey='',acceptedPayload='';
-try{const source=JSON.parse(decodeURIComponent(location.hash.slice(1)));$('url').value=source.url||'';$('title').value=source.title||'';autoCapture=source.auto===true}catch{}
+try{const source=JSON.parse(decodeURIComponent(location.hash.slice(1)));$('url').value=source.url||'';$('title').value=source.title||'';$('capture-options').open=!!source.title;autoCapture=source.auto===true}catch{}
 history.replaceState(null,'',location.pathname);
 const storedToken=localStorage.getItem('paoding-token')||'';
 $('token').value=storedToken;$('remember').checked=!!storedToken;
@@ -36,7 +37,7 @@ $('url').oninput=()=>$('url').setCustomValidity('');
 function payload(){return JSON.stringify({url:$('url').value.trim(),title:$('title').value.trim(),instruction:$('instruction').value.trim()})}
 function showStatus(kind,title,message){const box=$('status');box.hidden=false;box.className='status'+(kind==='error'?' error':'');box.replaceChildren();const heading=document.createElement('h2');heading.textContent=title;heading.tabIndex=-1;const text=document.createElement('p');text.textContent=message;box.append(heading,text);return box}
 function focusStatus(){const heading=$('status').querySelector('h2');heading.focus({preventScroll:true});$('status').scrollIntoView({block:'nearest'})}
-function nextCapture(){acceptedPayload='';pendingPayload='';requestKey='';$('url').value='';$('title').value='';$('status').hidden=true;$('submit').disabled=false;$('url').focus()}
+function nextCapture(){acceptedPayload='';pendingPayload='';requestKey='';$('url').value='';$('title').value='';$('instruction').value='';$('capture-options').open=false;$('status').hidden=true;$('submit').disabled=false;$('url').focus()}
 $('capture').addEventListener('input',()=>{if(!busy)$('submit').disabled=payload()===acceptedPayload});
 $('capture').onsubmit=async event=>{
   event.preventDefault();if(busy||payload()===acceptedPayload)return;
@@ -53,9 +54,9 @@ $('capture').onsubmit=async event=>{
     if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:result.error?.message||'收录失败，请检查链接和服务状态。');
     if(!result.job_id)throw Error('服务未返回任务编号，请稍后重试。');
     acceptedPayload=body;if($('remember').checked&&$('token').value.trim()===submittedToken)localStorage.setItem('paoding-token',submittedToken);
-    const box=showStatus('success','已接单，等待后台处理','处理完成后，知识卡片会出现在知识库。可以在最近任务查看进度。');
-    const id=document.createElement('code');id.className='job-id';id.textContent='任务：'+result.job_id;box.append(id);
-    const actions=document.createElement('div');actions.className='next';const link=document.createElement('a');link.className='button';link.href='/library#recent';link.textContent='查看任务进度';
+    const box=showStatus('success',result.kind==='creator'?'已提交账号追踪':'已提交收录',result.kind==='creator'?'打开任务进度，可查看账号巡检结果。':'打开任务进度可查看处理状态，完成后可直接阅读卡片。');
+    const id=document.createElement('code');id.className='job-id';id.textContent='任务编号 '+result.job_id;box.append(id);
+    const actions=document.createElement('div');actions.className='next';const link=document.createElement('a');link.className='button';link.href='/library?job='+encodeURIComponent(result.job_id)+'#recent';link.textContent='查看任务进度';
     const next=document.createElement('button');next.className='secondary';next.type='button';next.textContent='收录下一条';next.onclick=nextCapture;actions.append(link,next);box.append(actions);focusStatus();
   }catch(error){showStatus('error','暂时未能收录',error.name==='TimeoutError'?'提交超时，请重试；相同内容不会因本次重试而重复创建任务。':error instanceof TypeError?'无法连接庖丁，请检查网络或服务后重试。':error.message);focusStatus()}
   finally{busy=false;$('capture').setAttribute('aria-busy','false');$('submit').textContent='收录内容';$('submit').disabled=payload()===acceptedPayload}

@@ -22,19 +22,18 @@
 <link rel="stylesheet" href="/assets/workspace.css">
 </head>
 <body>
-__PAODING_MOBILE_NAV__
-<header class="desktop-header"><a class="brand" href="/library" aria-label="庖丁，返回知识库">庖丁 <small>PAODING ENGINE</small></a><nav><a href="/library">知识库</a><a href="/guide">接入指南</a><a href="/docs">接口文档 ↗</a></nav></header>
+__PAODING_WORKSPACE_NAV__
 <main id="main-content" tabindex="-1">
-  <div class="eyebrow">CONTROL ROOM / 01</div>
-  <div class="intro"><h1>把工具<br>接入庖丁。</h1><p class="note">从一个模型开始即可。需要更多平台时，再展开对应设置。已保存的密钥不会显示；留空会保留原值。</p></div>
+  <div class="intro"><h1>模型设置</h1><p class="note">展开要用的服务商，填写密钥或登录授权，再选择模型。已保存的密钥留空即可保留。</p></div>
   <form id="auth" class="token" hidden><label for="token">庖丁 API 访问令牌</label><input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required><button type="submit" id="connect">连接</button></form>
   <details class="mobile-toc" id="mobile-toc"><summary>设置目录 · 切换分组</summary><nav id="mobile-nav" aria-label="手机设置分组"></nav></details><div class="layout"><aside class="sidebar"><strong>连接与服务</strong><p>按需设置，不必一次填完。</p><nav id="nav"></nav></aside>
-  <form id="form"><div id="error" role="alert"></div><button id="retry-load" class="secondary retry-load" type="button" hidden>重新加载设置</button><div id="groups" aria-busy="true"><p class="group-help">正在读取设置…</p></div><div class="actions"><button id="save" type="submit">保存设置</button><div class="save-feedback"><span id="status" role="status" aria-live="polite"></span><div id="save-error" role="alert"></div></div></div><p class="help">单个模型测试会发送简短文字请求，可能产生费用；测试前请确认服务地址可信。列表同步不自动切换当前模型。</p></form></div>
+  <form id="form"><div id="error" role="alert"></div><button id="retry-load" class="secondary retry-load" type="button" hidden>重新加载设置</button><div id="groups" aria-busy="true"><p class="group-help">正在读取设置…</p></div><div class="actions"><button id="save" type="submit">保存设置</button><div class="save-feedback"><span id="status" role="status" aria-live="polite"></span><div id="save-error" role="alert"></div><a id="after-save" href="/capture" hidden>前往收录内容 →</a></div></div><p class="help">单个模型测试会发送简短文字请求，可能产生费用；测试前请确认服务地址可信。列表同步不自动切换当前模型。 <a href="/docs">接口文档 ↗</a></p></form></div>
 </main>
 <script>
 const $=id=>document.getElementById(id), groupNames=['模型','Google 授权','模型路由','采集','文档','Telegram','飞书','企业微信','高级'];
 const builtin=[['deepseek','DeepSeek','DEEPSEEK_API_KEY'],['qwen','通义千问','QWEN_API_KEY'],['gemini','Gemini','GEMINI_API_KEY'],['doubao','豆包','DOUBAO_API_KEY'],['anthropic','Claude','ANTHROPIC_API_KEY'],['openai','OpenAI','OPENAI_API_KEY']];
-const hints={'模型':'服务商连接测试检查模型列表接口；单模型测试会单独发送一次真实文字请求，可能产生费用。网页授权与各厂商原生账号订阅的权限、计费可能不同。','Google 授权':'Google Cloud 授权需先启用 Generative Language API，并配置 OAuth 桌面客户端。授权会请求 Google Cloud 权限，调用使用所填项目的配额及计费，与 Gemini 网页订阅分开。','模型路由':'格式：服务商:模型ID；多个备选用英文逗号隔开。留空使用默认路由。','采集':'抖音和小红书可使用 TikHub；RSS 地址用于账号追踪。','文档':'按需接入文档或网页解析服务。','高级':'填写服务商名称和模型 ID，例如 openai 与 whisper-1。'};
+const hints={'模型':'连接测试会读取模型列表。测试单个模型会发送一次真实的生成请求，可能产生费用。','Google 授权':'Google Cloud 授权需先启用 Generative Language API，并配置 OAuth 桌面客户端。授权会请求 Google Cloud 权限，调用使用所填项目的配额及计费，与 Gemini 网页订阅分开。','模型路由':'格式：服务商:模型ID；多个备选用英文逗号隔开。留空使用默认路由。','采集':'抖音和小红书可使用 TikHub；RSS 地址用于账号追踪。','文档':'按需接入文档或网页解析服务。','高级':'填写服务商名称和模型 ID，例如 openai 与 whisper-1。'};
+let activeActions=0, savingAll=false;
 let loadVersion=0,fields=[],customs=[],catalog=[],routes={},chatgptConnected=false,googleConnected=false,auth=localStorage.getItem('paoding-token')||'';
 function headers(){return auth?{'Authorization':'Bearer '+auth}:{}}
 async function api(path,options={}){const response=await fetch(path,{...options,headers:{...headers(),...(options.headers||{})},cache:'no-store'}).catch(()=>{throw Error('无法连接庖丁，请检查网络或服务后重试。')});if(response.status===401){$('auth').hidden=false;throw Error('请填写庖丁 API 访问令牌。')}let data;try{data=await response.json()}catch{throw Error('服务响应无法读取，请稍后重试。')}if(!response.ok)throw Error(data.error?.message||(typeof data.detail==='string'?data.detail:'请求失败，请检查输入和服务状态。'));return data}
@@ -43,16 +42,25 @@ $('retry-load').onclick=load;
 function openSettingsSection(){let id;try{id=decodeURIComponent(location.hash.slice(1))}catch{return}if(!id.startsWith('group-'))return;const group=document.getElementById(id);if(!group)return;group.open=true;group.scrollIntoView({block:'start'});group.querySelector('summary').focus({preventScroll:true})}
 window.addEventListener('hashchange',openSettingsSection);
 function fieldRow(f){const row=document.createElement('div');row.className='row';const label=document.createElement('label');label.htmlFor=f.key;label.textContent=f.label;const small=document.createElement('small');small.textContent=f.key;label.append(small);const column=document.createElement('div'),wrap=document.createElement('div'),input=document.createElement('input'),state=document.createElement('span');wrap.className='inputwrap';input.id=f.key;input.name=f.key;input.type=f.secret?'password':'text';input.autocomplete='off';input.autocapitalize='off';input.spellcheck=false;input.value=f.secret?'':f.value;input.dataset.initial=input.value;input.placeholder=f.secret?(f.configured?'已配置，留空保持不变':'填写后保存'):'选填';state.className='state'+(f.configured?' yes':'');state.id='state-'+f.key;state.textContent=f.configured?'已配置':'未配置';wrap.append(input,state);column.append(wrap);if(f.environment_override){const tip=document.createElement('span');tip.className='help';tip.textContent='此项由环境变量覆盖，请同时更新环境变量。';column.append(tip)}row.append(label,column);return row}
-function action(label,fn){const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=label;b.onclick=async()=>{if(b.disabled)return;const scope=b.closest('.provider')||b.parentElement,buttons=[...scope.querySelectorAll('button')].map(button=>[button,button.disabled]);buttons.forEach(([button])=>button.disabled=true);b.setAttribute('aria-busy','true');try{await fn()}catch(error){$('status').textContent=error.message}finally{buttons.forEach(([button,disabled])=>button.disabled=disabled);b.removeAttribute('aria-busy')}};return b}
+function action(label,fn){const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=label;b.onclick=async()=>{if(b.disabled||savingAll)return;activeActions++;$('save').disabled=true;const scope=b.closest('.provider')||b.parentElement,buttons=[...scope.querySelectorAll('button')].map(button=>[button,button.disabled]);buttons.forEach(([button])=>button.disabled=true);b.setAttribute('aria-busy','true');try{await fn()}catch(error){$('status').textContent=error.message}finally{buttons.forEach(([button,disabled])=>button.disabled=disabled);b.removeAttribute('aria-busy');activeActions--;$('save').disabled=!!activeActions||!fields.length;if($('status').textContent==='有未保存的修改。'&&!hasPendingSettings())$('status').textContent=''}};return b}
 function node(tag,text,cls){const element=document.createElement(tag);if(text)element.textContent=text;if(cls)element.className=cls;return element}
 function buildCustomForm(){const details=node('details',null,'custom-form'),summary=node('summary','添加自定义服务商');details.append(summary);const wrap=node('div');const preset=node('select');preset.id='preset';preset.setAttribute('aria-label','服务商预设');for(const [value,label] of [['custom','自定义 OpenAI 兼容服务'],['openrouter','OpenRouter'],['atlascloud','Atlas Cloud']]){const option=node('option',label);option.value=value;preset.append(option)}wrap.append(preset);for(const [id,label,type,placeholder] of [['new-id','服务商标识（英文小写、数字、下划线）','text','例如 my_gateway'],['new-name','显示名称','text','例如 我的中转站'],['new-url','Base URL','url','例如 https://example.com/v1'],['new-key','API Key（可选）','password','留空可稍后配置']]){const l=node('label',label),input=node('input');input.id=id;input.type=type;input.placeholder=placeholder;input.autocomplete='off';input.autocapitalize='off';input.spellcheck=false;input.maxLength={'new-id':32,'new-name':80,'new-url':500,'new-key':4096}[id];l.append(input);wrap.append(l)}const checklabel=node('label','支持 video_url 视频输入（仅确认接口支持时勾选）'),check=node('input');check.type='checkbox';check.id='new-video';check.style.width='auto';checklabel.className='checkbox-label';checklabel.prepend(check);wrap.append(checklabel);const out=node('div',null,'help');out.setAttribute('role','status');const addProvider=action('添加服务商',async()=>{try{out.textContent='正在添加服务商…';for(const [id,label] of [['new-id','服务商标识'],['new-name','显示名称'],['new-url','Base URL']]){if(!$(id).value.trim()){out.textContent='请填写'+label+'。';$(id).focus();return}}if(!/^[a-z][a-z0-9_]{0,31}$/.test($('new-id').value.trim())){out.textContent='服务商标识须以小写英文字母开头，仅含小写字母、数字或下划线，最多 32 位。';$('new-id').focus();return}if(!$('new-url').reportValidity()){out.textContent='请填写有效的服务商 Base URL。';return}const body={id:$('new-id').value.trim(),name:$('new-name').value.trim(),base_url:$('new-url').value.trim(),api_key:$('new-key').value,video_url_support:$('new-video').checked};const result=await api('/api/v1/models/providers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('new-key').value='';customs=customs.filter(x=>x.id!==result.id);customs.push(result);const old=$('provider-'+result.id);if(old)old.remove();const added=providerPanel(result.id,result.name,null,result);modelList(result.id,added);added.open=true;$('custom-providers').append(added);details.open=false;added.scrollIntoView({block:'start'});added.querySelector('summary').focus({preventScroll:true});out.textContent='';$('status').textContent='服务商已添加。';}catch(error){out.textContent=error.message}});addProvider.id='add-provider';wrap.append(addProvider,out);wrap.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type!=='checkbox'){e.preventDefault();addProvider.click()}});preset.onchange=()=>{if(preset.value==='openrouter'){$('new-id').value='openrouter';$('new-name').value='OpenRouter';$('new-url').value='https://openrouter.ai/api/v1';$('new-video').checked=true}else if(preset.value==='atlascloud'){$('new-id').value='atlascloud';$('new-name').value='Atlas Cloud';$('new-url').value='https://api.atlascloud.ai/v1';$('new-video').checked=false}else{$('new-id').value='';$('new-name').value='';$('new-url').value='';$('new-video').checked=false}};details.append(wrap);return details}
 function authButton(provider,label,before=null){
   const wrap=node('div',null,'oauth-action'),out=node('p',null,'help');out.setAttribute('role','status');
   const button=action(label,async()=>{out.textContent='';out.classList.remove('error');const popup=window.open('about:blank','_blank');if(!popup){out.classList.add('error');out.textContent='浏览器拦截了登录窗口，请允许弹窗后重试。';return}popup.opener=null;try{if(before)await before();const data=await api('/api/v1/oauth/'+provider+'/start',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});popup.location.href=data.authorization_url;out.textContent='请在新窗口完成授权，成功后在新窗口继续设置。'}catch(error){popup.close();out.classList.add('error');out.textContent=error.message}});wrap.append(button,out);return wrap;
 }
+function updateProviderSummary(id,panel,count=catalog.filter(model=>model.provider===id).length) {
+  const provider=customs.find(item=>item.id===id);
+  const built=builtin.find(item=>item[0]===id);
+  const oauth=id==='chatgpt'||id==='gemini_google';
+  const configured=oauth ? (id==='chatgpt'?chatgptConnected:googleConnected)
+    : provider ? provider.configured : fields.find(field=>field.key===built?.[2])?.configured;
+  const label=oauth?(configured?'已授权':'未授权'):(configured?'已配密钥':'未配密钥');
+  panel.querySelector('.provider-meta').textContent=label+' · '+count+' 个模型';
+}
 function modelList(id,panel){
   const target=panel.querySelector('.model-list');if(!target)return;target.replaceChildren();
-  const all=catalog.filter(x=>x.provider===id),meta=panel.querySelector('.provider-meta');if(meta)meta.textContent=all.length+' 个模型';
+  const all=catalog.filter(x=>x.provider===id);updateProviderSummary(id,panel,all.length);
   if(!all.length){target.append(node('p','尚无模型。同步列表，或手动添加模型 ID。','help'));return}
   const filter=node('input');filter.type='search';filter.enterKeyHint='search';filter.placeholder='搜索此服务商的模型';filter.setAttribute('aria-label','搜索 '+id+' 模型');filter.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();filter.blur()}});target.append(filter);
   const rows=node('div',null,'model-results');rows.tabIndex=-1;const paging=node('div',null,'provider-actions');target.append(rows,paging);let page=0;
@@ -73,18 +81,124 @@ function modelList(id,panel){
   filter.oninput=()=>{page=0;draw()};draw();
 }
 async function updateCatalog(id){catalog=catalog.filter(x=>x.provider!==id).concat(await api('/api/v1/models?provider='+encodeURIComponent(id)));modelList(id,$('provider-'+id))}
-function providerPanel(id,name,key,custom){const panel=node('details',null,'provider');panel.id='provider-'+id;panel.open=matchMedia('(min-width:721px)').matches;const summary=node('summary');summary.append(node('h3',name),node('span',null,'provider-meta'));panel.append(summary);const customPrefix='custom-'+id+'-';let keys=[];if(id==='chatgpt'){panel.append(node('p',chatgptConnected?'已通过 ChatGPT 授权。':'尚未连接 ChatGPT 账号。','help'));panel.append(authButton('chatgpt',chatgptConnected?'重新授权 ChatGPT':'Continue with ChatGPT'))}else if(id==='gemini_google'){panel.append(node('p',googleConnected?'已通过 Google Cloud 授权。':'尚未连接 Google Cloud 项目。请先填写 Google 授权配置。','help'));panel.append(authButton('gemini_google',googleConnected?'重新授权 Google':'使用 Google 授权',()=>saveFields(['PAODING_GOOGLE_OAUTH_CLIENT_ID','PAODING_GOOGLE_OAUTH_CLIENT_SECRET','PAODING_GOOGLE_PROJECT_ID'])))}else if(custom){for(const [suffix,label,type,val] of [['url','Base URL','url',custom.base_url],['key','API Key','password','']]){const f={key:customPrefix+suffix,label,group:'模型',secret:type==='password',value:val,configured:suffix==='key'?custom.configured:true};panel.append(fieldRow(f))}const l=node('label','支持 video_url 视频输入'),check=node('input');check.id=customPrefix+'video';check.type='checkbox';check.checked=!!custom.video_url_support;check.style.width='auto';l.className='checkbox-label';l.prepend(check);panel.append(l);if(custom.environment_override)panel.append(node('p','此服务商的密钥由系统环境变量提供，需移除环境变量后才能在这里更换。','help'));if(id==='openrouter')panel.append(authButton('openrouter','使用 OpenRouter 网页授权'))}else{const base='PAODING_'+id.toUpperCase()+'_BASE_URL';keys=[base,key];for(const k of keys){const f=fields.find(x=>x.key===k);if(f)panel.append(fieldRow(f))}}
-const actions=node('div',null,'provider-actions'),status=node('div','','result');status.id='result-'+id;status.setAttribute('role','status');const save=async()=>{if(id==='chatgpt'||id==='gemini_google')return;if(custom){const payload={id,name,base_url:$(customPrefix+'url').value.trim(),api_key:$(customPrefix+'key').value,video_url_support:$(customPrefix+'video').checked,video_audio:!!custom.video_audio};const saved=await api('/api/v1/models/providers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if($(customPrefix+'key').value===payload.api_key)$(customPrefix+'key').value='';$(customPrefix+'url').dataset.initial=saved.base_url;const keyState=$('state-'+customPrefix+'key');keyState.textContent=saved.configured?'已配置':'未配置';keyState.className='state'+(saved.configured?' yes':'');custom.base_url=saved.base_url;custom.configured=saved.configured}else await saveFields(keys)};if(id!=='chatgpt'&&id!=='gemini_google')actions.append(action('保存',async()=>{status.textContent='正在保存…';try{await save();status.textContent='已保存。'}catch(error){status.textContent=error.message}}));actions.append(action('测试服务连接',async()=>{status.textContent='正在测试…';try{await save();const data=await api('/api/v1/models/probe?provider='+encodeURIComponent(id),{method:'POST'});status.textContent=data.health==='healthy'?'服务连接成功 · '+data.latency_ms+' 毫秒':data.health==='not_configured'?'请先完成授权或填写 API Key':'连接失败 · '+(data.reason||'请检查配置')}catch(error){status.textContent=error.message}}),action('同步最新模型',async()=>{status.textContent='正在同步…';try{await save();const response=await api('/api/v1/models/sync?provider='+encodeURIComponent(id),{method:'POST'}),item=response[0];if(item.status!=='synced')throw Error(item.status==='not_configured'?'请先授权或填写 API Key':'同步失败，可手动添加模型 ID。');await updateCatalog(id);status.textContent='已同步 '+item.count+' 个模型；请以服务商信息确认最新版本和模态。'}catch(error){status.textContent=error.message}}));panel.append(actions,status);const add=node('div',null,'model-add'),model=node('input');model.maxLength=200;model.placeholder='手动输入模型 ID，例如 openai/gpt-4o';model.setAttribute('aria-label',name+' 模型 ID');model.autocapitalize='off';model.spellcheck=false;const addModel=action('添加模型',async()=>{if(!model.value.trim()){status.textContent='请先填写模型 ID。';model.focus();return}status.textContent='正在添加模型…';try{await api('/api/v1/models/manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:id,model:model.value.trim()})});model.value='';await updateCatalog(id);status.textContent='模型已添加。'}catch(error){status.textContent=error.message}});add.append(model,addModel);model.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addModel.click()}});panel.append(add,node('div',null,'model-list'));return panel}
-function render(){const groups=$('groups'),nav=$('nav');groups.replaceChildren();nav.replaceChildren();$('mobile-nav').replaceChildren();for(const group of groupNames){const items=fields.filter(f=>f.group===group);if(!items.length)continue;const d=node('details');d.id='group-'+group;d.open=group==='模型';d.append(node('summary',group));if(hints[group])d.append(node('p',hints[group],'group-help'));if(group==='模型'){const login=node('div',null,'custom-form');login.append(node('strong','网页授权'),node('p','使用 OpenRouter 账号可访问其提供的 GPT、Qwen、GLM 等模型，使用的是 OpenRouter 账户的额度；不代表授权了这些厂商的原生账号。','help'),authButton('chatgpt','Continue with ChatGPT'),document.createTextNode(' '),authButton('openrouter','使用 OpenRouter 网页授权'),document.createTextNode(' '),authButton('gemini_google','使用 Google 授权 Gemini',()=>saveFields(['PAODING_GOOGLE_OAUTH_CLIENT_ID','PAODING_GOOGLE_OAUTH_CLIENT_SECRET','PAODING_GOOGLE_PROJECT_ID'])),node('p','Gemini 的 Google 授权需先在“Google 授权”中填写云项目和 OAuth 客户端。','help'),node('p','其他厂商的网页登录能力取决于其官方 API 授权；可按下方配置 API Key。','help'));d.append(login,buildCustomForm());d.append(providerPanel('chatgpt','ChatGPT 登录',null,null),providerPanel('gemini_google','Gemini · Google 授权',null,null));for(const [id,name,key] of builtin)d.append(providerPanel(id,name,key,null));const extra=node('div');extra.id='custom-providers';for(const c of customs)extra.append(providerPanel(c.id,c.name,null,c));d.append(extra)}else for(const f of items)d.append(fieldRow(f));groups.append(d);const a=node('a',group);a.href='#'+d.id;a.onclick=()=>{d.open=true};const mobileLink=a.cloneNode(true);mobileLink.onclick=()=>{d.open=true;$('mobile-toc').open=false};nav.append(a);$('mobile-nav').append(mobileLink)}for(const [id] of [['chatgpt'],['gemini_google'],...builtin,...customs.map(x=>[x.id])]){const p=$('provider-'+id);if(p)modelList(id,p)}}
+function providerPanel(id,name,key,custom){const panel=node('details',null,'provider');panel.id='provider-'+id;const summary=node('summary');summary.append(node('h3',name),node('span',null,'provider-meta'));panel.append(summary);const customPrefix='custom-'+id+'-';let keys=[];if(id==='chatgpt'){panel.append(node('p',chatgptConnected?'已通过 ChatGPT 授权。':'尚未连接 ChatGPT 账号。','help'));panel.append(authButton('chatgpt',chatgptConnected?'重新授权 ChatGPT':'Continue with ChatGPT'))}else if(id==='gemini_google'){panel.append(node('p',googleConnected?'已通过 Google Cloud 授权。':'尚未连接 Google Cloud 项目。请先填写 Google 授权配置。','help'));const configLink=node('a','填写 Google 授权配置');configLink.href='#group-Google 授权';panel.append(configLink);panel.append(authButton('gemini_google',googleConnected?'重新授权 Google':'使用 Google 授权',()=>saveFields(['PAODING_GOOGLE_OAUTH_CLIENT_ID','PAODING_GOOGLE_OAUTH_CLIENT_SECRET','PAODING_GOOGLE_PROJECT_ID'])))}else if(custom){for(const [suffix,label,type,val] of [['url','Base URL','url',custom.base_url],['key','API Key','password','']]){const f={key:customPrefix+suffix,label,group:'模型',secret:type==='password',value:val,configured:suffix==='key'?custom.configured:true};panel.append(fieldRow(f))}const l=node('label','支持 video_url 视频输入'),check=node('input');check.id=customPrefix+'video';check.type='checkbox';check.checked=!!custom.video_url_support;check.style.width='auto';l.className='checkbox-label';l.prepend(check);panel.append(l);if(custom.environment_override)panel.append(node('p','此服务商的密钥由系统环境变量提供，需移除环境变量后才能在这里更换。','help'));if(id==='openrouter')panel.append(...openRouterLogin())}else{const base='PAODING_'+id.toUpperCase()+'_BASE_URL';keys=[base,key];for(const k of keys){const f=fields.find(x=>x.key===k);if(f)panel.append(fieldRow(f))}}
+const actions=node('div',null,'provider-actions'),status=node('div','','result');status.id='result-'+id;status.setAttribute('role','status');const save=async()=>{if(id==='chatgpt'||id==='gemini_google')return;if(custom)await saveCustomProvider(custom,changedProvider(custom));else await saveFields(keys)};if(id!=='chatgpt'&&id!=='gemini_google')actions.append(action('保存',async()=>{status.textContent='正在保存…';try{await save();status.textContent='已保存。';$('after-save').hidden=hasPendingSettings()}catch(error){status.textContent=error.message}}));actions.append(action('测试服务连接',async()=>{status.textContent='正在测试…';try{await save();const data=await api('/api/v1/models/probe?provider='+encodeURIComponent(id),{method:'POST'});status.textContent=data.health==='healthy'?'服务连接成功 · '+data.latency_ms+' 毫秒':data.health==='not_configured'?'请先完成授权或填写 API Key':'连接失败 · '+(data.reason||'请检查配置')}catch(error){status.textContent=error.message}}),action('同步最新模型',async()=>{status.textContent='正在同步…';try{await save();const response=await api('/api/v1/models/sync?provider='+encodeURIComponent(id),{method:'POST'}),item=response[0];if(item.status!=='synced')throw Error(item.status==='not_configured'?'请先授权或填写 API Key':'同步失败，可手动添加模型 ID。');await updateCatalog(id);status.textContent='已同步 '+item.count+' 个模型；请以服务商信息确认最新版本和模态。'}catch(error){status.textContent=error.message}}));panel.append(actions,status);const add=node('div',null,'model-add'),model=node('input');model.maxLength=200;model.placeholder='手动输入模型 ID，例如 openai/gpt-4o';model.setAttribute('aria-label',name+' 模型 ID');model.autocapitalize='off';model.spellcheck=false;const addModel=action('添加模型',async()=>{if(!model.value.trim()){status.textContent='请先填写模型 ID。';model.focus();return}status.textContent='正在添加模型…';try{await api('/api/v1/models/manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:id,model:model.value.trim()})});model.value='';await updateCatalog(id);status.textContent='模型已添加。'}catch(error){status.textContent=error.message}});add.append(model,addModel);model.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addModel.click()}});panel.append(add,node('div',null,'model-list'));return panel}
+function openRouterLogin(){
+  return [node('p','此授权使用 OpenRouter 账户的额度，可访问该账户可用的模型。','help'),authButton('openrouter','使用 OpenRouter 网页授权')];
+}
+function render(){
+  const groups=$('groups'),nav=$('nav');
+  groups.replaceChildren();nav.replaceChildren();$('mobile-nav').replaceChildren();
+  for(const group of groupNames){
+    const items=fields.filter(f=>f.group===group);
+    if(!items.length)continue;
+    const d=node('details');
+    d.id='group-'+group;d.open=group==='模型';d.append(node('summary',group));
+    if(hints[group])d.append(node('p',hints[group],'group-help'));
+    if(group==='模型'){
+      d.append(buildCustomForm(),providerPanel('chatgpt','ChatGPT 登录',null,null),providerPanel('gemini_google','Gemini · Google 授权',null,null));
+      for(const [id,name,key] of builtin)d.append(providerPanel(id,name,key,null));
+      const extra=node('div');extra.id='custom-providers';
+      for(const c of customs)extra.append(providerPanel(c.id,c.name,null,c));
+      if(!customs.some(c=>c.id==='openrouter')){
+        const panel=node('details',null,'provider'),summary=node('summary');
+        panel.id='provider-openrouter';
+        summary.append(node('h3','OpenRouter'),node('span','可通过账号授权','provider-meta'));
+        panel.append(summary,...openRouterLogin());extra.append(panel);
+      }
+      d.append(extra);
+    }else{
+      for(const field of items)d.append(fieldRow(field));
+    }
+    groups.append(d);
+    const link=node('a',group);
+    link.href='#'+d.id;link.onclick=()=>{d.open=true};
+    const mobile=link.cloneNode(true);
+    mobile.onclick=()=>{d.open=true;$('mobile-toc').open=false};
+    nav.append(link);$('mobile-nav').append(mobile);
+  }
+  for(const panel of groups.querySelectorAll('.provider')){
+    modelList(panel.id.slice('provider-'.length),panel);
+  }
+}
+function changedProvider(provider) {
+  const prefix='custom-'+provider.id+'-';
+  const base=$(prefix+'url').value.trim(),key=$(prefix+'key').value,video=$(prefix+'video').checked;
+  if(base===provider.base_url&&!key&&video===!!provider.video_url_support)return null;
+  return {id:provider.id,name:provider.name,base_url:base,api_key:key,video_url_support:video,video_audio:!!provider.video_audio};
+}
+function hasPendingSettings(){
+  return fields.some(f=>$(f.key)&&$(f.key).value.trim()!==$(f.key).dataset.initial)||customs.some(changedProvider);
+}
+async function saveCustomProvider(provider,body) {
+  if(!body)return;
+  const saved=await api('/api/v1/models/providers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const prefix='custom-'+provider.id+'-',url=$(prefix+'url'),key=$(prefix+'key');
+  if(key.value===body.api_key)key.value='';
+  if(url.value.trim()===body.base_url)url.value=saved.base_url;
+  url.dataset.initial=saved.base_url;
+  key.placeholder=saved.configured?'已配置，留空保持不变':'填写后保存';
+  const state=$('state-'+prefix+'key');
+  state.textContent=saved.configured?'已配置':'未配置';
+  state.classList.toggle('yes',saved.configured);
+  Object.assign(provider,saved);
+  updateProviderSummary(provider.id,$('provider-'+provider.id));
+}
 async function saveFields(keys){
-  const values={},submitted={};for(const key of keys){const f=fields.find(x=>x.key===key),input=$(key);if(!f||!input)continue;if(f.secret?input.value!=='' : input.value!==input.dataset.initial){values[key]=input.value.trim();submitted[key]=input.value}}
-  if(!Object.keys(values).length){$('status').textContent='设置没有变化。';return}
+  const values={},submitted={};
+  for(const key of keys){
+    const f=fields.find(x=>x.key===key),input=$(key);
+    if(!f||!input)continue;
+    const value=input.value.trim();
+    if(f.secret?value!=='':value!==input.dataset.initial){values[key]=value;submitted[key]=input.value}
+  }
+  if(!Object.keys(values).length)return false;
   await api('/api/v1/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
-  for(const key of Object.keys(values)){const f=fields.find(x=>x.key===key),input=$(key),state=$('state-'+key);f.configured=!!values[key];state.textContent=f.configured?'已配置':'未配置';state.className='state'+(f.configured?' yes':'');if(f.secret){if(input.value===submitted[key])input.value='';input.placeholder='已配置，留空保持不变'}input.dataset.initial=f.secret?'':values[key]}
-  $('status').textContent='已保存，新任务会使用更新后的配置。';
+  for(const key of Object.keys(values)){
+    const f=fields.find(x=>x.key===key),input=$(key),state=$('state-'+key);
+    f.configured=!!values[key];
+    state.textContent=f.configured?'已配置':'未配置';
+    state.className='state'+(f.configured?' yes':'');
+    if(input.value===submitted[key])input.value=f.secret?'':values[key];
+    if(f.secret)input.placeholder='已配置，留空保持不变';
+    input.dataset.initial=f.secret?'':values[key];
+    const panel=input.closest('.provider');
+    if(panel)updateProviderSummary(panel.id.slice('provider-'.length),panel);
+  }
+  return true;
 }
 $('auth').onsubmit=e=>{e.preventDefault();auth=$('token').value.trim();localStorage.setItem('paoding-token',auth);load()};
-$('form').onsubmit=async event=>{event.preventDefault();$('save').disabled=true;$('save').textContent='正在保存…';$('error').textContent='';$('save-error').textContent='';try{await saveFields(fields.map(f=>f.key))}catch(error){$('status').textContent='';$('save-error').textContent=error.message}finally{$('save').disabled=false;$('save').textContent='保存设置'}};
+$('form').addEventListener('input',event=>{
+  if(!fields.length||(!event.target.hasAttribute('data-initial')&&!event.target.id.startsWith('custom-')))return;
+  const dirty=hasPendingSettings();
+  $('after-save').hidden=true;
+  $('status').textContent=dirty?'有未保存的修改。':'';
+});
+$('form').onsubmit=async event=>{
+  event.preventDefault();
+  if(savingAll||activeActions||!fields.length)return;
+  savingAll=true;
+  $('save').disabled=true;
+  $('save').textContent='正在保存…';
+  $('error').textContent=$('save-error').textContent=$('status').textContent='';
+  $('after-save').hidden=true;
+  const pending=customs.map(provider=>[provider,changedProvider(provider)]).filter(([,body])=>body);
+  let saved=false;
+  try{
+    saved=await saveFields(fields.map(f=>f.key));
+    for(const [provider,body] of pending){
+      try{await saveCustomProvider(provider,body);saved=true}
+      catch(error){throw Error(provider.name+'：'+error.message)}
+    }
+    const dirty=hasPendingSettings();
+    $('after-save').hidden=dirty||!saved;
+    $('status').textContent=dirty?'仍有新修改，点击保存设置即可保存。':saved?'已保存，新任务会使用更新后的配置。':'设置没有变化。';
+  }catch(error){
+    $('save-error').textContent=(saved?'部分设置已保存。':'')+error.message;
+  }finally{
+    savingAll=false;$('save').disabled=false;$('save').textContent='保存设置';
+  }
+};
 load();
 </script>
 </body></html>

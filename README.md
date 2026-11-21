@@ -21,16 +21,22 @@ uv run paoding demo
 
 ```sh
 uv sync --frozen
-cp .env.example .env
+test -f .env || cp .env.example .env
 docker compose up -d --wait postgres
 uv run paoding init
 ```
 
-Windows PowerShell 可执行 `./scripts/dev.ps1`；macOS 可执行 `bash scripts/dev.sh`。
+以上初始化步骤也可直接运行脚本。Windows PowerShell 使用 `./scripts/dev.ps1`，macOS 使用 `bash scripts/dev.sh`。
 
-1. 在 `.env` 填写需要使用的厂商密钥；在 `config/models.yaml` 配置实际可用模型与优先顺序。
-2. `uv run paoding models sync` 同步可见模型，`uv run paoding models test` 执行小额真实生成探针。
-3. 分别在两个终端启动 API 和 Worker：
+### 日常使用
+
+在 macOS 的项目目录双击 **打开庖丁.command**，或在终端运行 `uv run paoding open`。网页服务尚未运行时，它会同时启动网页和负责收录的 Worker，并打开知识库。使用期间保留这个终端窗口。再次打开会复用现有服务。
+
+从「模型设置」连接所需的服务商，在「收录内容」粘贴链接。提交后点「查看任务进度」，处理完成后即可打开对应卡片。
+
+### 独立运行服务
+
+需要分开管理进程时，可以分别在两个终端运行下面的命令。模型和优先顺序也可以通过 `.env` 和 `config/models.yaml` 配置，`uv run paoding models sync` 可同步模型列表，`uv run paoding models test` 可执行真实生成测试。
 
 ```sh
 uv run paoding serve

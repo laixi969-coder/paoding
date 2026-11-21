@@ -137,6 +137,21 @@ def serve():
     run()
 
 
+@app.command("open")
+def open_command():
+    """打开本机知识库，冷启动时一并运行网页和收录 Worker。"""
+    import httpx
+    from filelock import Timeout
+
+    from paoding.local_workspace import open_workspace
+
+    try:
+        open_workspace()
+    except (RuntimeError, OSError, Timeout, httpx.HTTPError) as exc:
+        typer.echo(f"打开工作台失败：{exc}", err=True)
+        raise typer.Exit(1) from exc
+
+
 @app.command()
 def mcp():
     """启动本地 MCP stdio 服务。"""
@@ -332,3 +347,7 @@ def demo():
                 "atoms": rt.library.fetch_atoms(limit=3),
             }
         )
+
+
+if __name__ == "__main__":
+    app()

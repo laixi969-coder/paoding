@@ -30,7 +30,15 @@ def test_auth_validation_and_idempotency(rt):
             client.post("/api/v1/ingest", json=data, headers={"Idempotency-Key": "abc"}).status_code
             == 409
         )
-        assert client.get("/api/v1/jobs/" + first.json()["job_id"]).json()["status"] == "queued"
+        job_id = first.json()["job_id"]
+        job = client.get("/api/v1/jobs/" + job_id).json()
+        assert job["status"] == "queued" and job["title"] == "example.com"
+        recent = client.get("/api/v1/jobs?limit=1").json()[0]
+        assert (recent["id"], recent["title"], recent["created_at"]) == (
+            job_id,
+            job["title"],
+            job["created_at"],
+        )
         assert client.get("/api/v1/nodes/missing").status_code == 404
         assert client.get("/api/v1/atoms?limit=101").status_code == 422
         assert client.get("/api/v1/atoms?atom_type=bad").status_code == 422
@@ -119,17 +127,23 @@ def test_library_browses_searches_filters_and_detail(rt, source):
         detail = client.get("/api/v1/nodes/" + node_id).json()
         assert detail["cross_domain_dna"]["universal_principle"]
         assert detail["atoms"] and detail["platform"] == "youtube"
+        tracked = client.get("/api/v1/jobs/" + nodes[0].job_id).json()
+        assert tracked["title"] == source.name
+        assert tracked["status"] == "succeeded" and tracked["result"]["node_id"] == node_id
 
 
 @pytest.mark.parametrize("page", ["library", "capture", "guide", "settings"])
 def test_workspace_pages_share_navigation_and_load_styles(rt, page):
+    rt.settings.port = 8128
     with TestClient(create_app(rt), base_url="http://127.0.0.1:8010") as client:
         response = client.get(f"/{page}")
         assert response.status_code == 200
         assert response.headers["Cache-Control"] == "no-store"
         assert "__PAODING_" not in response.text
         document = BeautifulSoup(response.text, "html.parser")
-        navigation = document.select_one(".workspace-mobile-nav")
+        if page == "guide":
+            assert "127.0.0.1:8128/api/v1/library" in document.select_one("#curl-code").get_text()
+        navigation = document.select_one(".workspace-nav")
         assert [a["href"] for a in navigation.select("a")] == [
             "/library",
             "/capture",

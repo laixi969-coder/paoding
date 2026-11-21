@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
@@ -25,6 +26,25 @@ from paoding.storage.tables import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def job_summary(job: Job) -> dict:
+    title = None
+    if job.kind in {"ingest", "watch"}:
+        title = job.payload.get("title")
+        if not title:
+            try:
+                title = urlsplit(job.payload.get("url") or "").hostname
+            except ValueError:
+                pass
+    return {
+        "id": job.id,
+        "kind": job.kind,
+        "status": job.status,
+        "attempts": job.attempts,
+        "title": title,
+        "created_at": job.created_at.isoformat() + "Z",
+    }
 
 
 def create_app(runtime=None):
@@ -59,7 +79,7 @@ def create_app(runtime=None):
 
     @app.get("/guide", include_in_schema=False)
     def guide_page():
-        return workspace_page("guide")
+        return workspace_page("guide", port=rt.settings.port)
 
     @app.get("/capture", include_in_schema=False)
     def capture():
@@ -128,7 +148,7 @@ def create_app(runtime=None):
 
     @app.get("/health/live", tags=["health"])
     def live():
-        return {"status": "ok", "version": __version__}
+        return {"service": "paoding", "status": "ok", "version": __version__}
 
     @app.get("/health/ready", tags=["health"])
     def ready():
@@ -155,15 +175,11 @@ def create_app(runtime=None):
             if not job:
                 raise LookupError("Job not found")
             return {
-                "id": job.id,
-                "kind": job.kind,
-                "status": job.status,
-                "attempts": job.attempts,
+                **job_summary(job),
                 "result": job.result,
                 "error": {"code": job.error_code, "message": job.error_message}
                 if job.error_code
                 else None,
-                "created_at": job.created_at.isoformat() + "Z",
             }
 
     @router.get("/jobs", tags=["jobs"])
@@ -177,13 +193,7 @@ def create_app(runtime=None):
             if status:
                 stmt = stmt.where(Job.status == status)
             return [
-                {
-                    "id": j.id,
-                    "kind": j.kind,
-                    "status": j.status,
-                    "attempts": j.attempts,
-                    "error_code": j.error_code,
-                }
+                {**job_summary(j), "error_code": j.error_code}
                 for j in session.scalars(stmt.limit(limit).offset(offset))
             ]
 

@@ -7,4 +7,4 @@ docker compose up -d --wait postgres
 if ($LASTEXITCODE -ne 0) { throw "PostgreSQL startup failed" }
 uv run paoding init
 if ($LASTEXITCODE -ne 0) { throw "Database migration failed" }
-Write-Host "Ready. Run 'uv run paoding serve' and 'uv run paoding worker' in separate terminals."
+Write-Host "Ready. Run 'uv run paoding open' to open the local workspace."

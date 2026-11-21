@@ -5,8 +5,8 @@
 | 方法与路径 | 用途 |
 |---|---|
 | POST `/api/v1/ingest` | URL 入队；主页转为账号巡检任务；返回 202 |
-| GET `/api/v1/jobs` | 按 status 过滤，limit/offset 分页 |
-| GET `/api/v1/jobs/{id}` | 状态、次数、结果、错误码 |
+| GET `/api/v1/jobs` | 按 status 过滤，limit/offset 分页。含创建时间，收录和巡检任务优先显示提交标题，其次显示来源域名 |
+| GET `/api/v1/jobs/{id}` | 查询指定任务的状态、次数、结果及错误。收录成功后可用 `result.node_id` 打开卡片 |
 | POST `/api/v1/jobs/{id}/retry` | 人工重试失败任务 |
 | GET `/api/v1/nodes` | 知识卡片列表，可按平台过滤 |
 | GET `/api/v1/library` | 可分页的知识库工作台数据，支持关键词、来源、模态、分类和元件类型筛选 |
@@ -86,7 +86,7 @@ GET /api/v1/atoms?q=先呈现问题&limit=10
 
 ## v0.2 新增接口
 
-- GET `/` 或 `/library`：知识库工作台，支持卡片浏览、关键词搜索、筛选、详情和近期任务。
+- GET `/` 或 `/library`：知识库工作台，支持卡片浏览、关键词搜索、筛选、详情和近期任务。打开 `/library?job={任务ID}#recent` 可持续查看指定任务的处理进度。
 - GET `/capture`：同源收录页，书签可一键提交 URL 与标题；配置令牌的主机先在页面填写。
 - GET `/api/v1/taxonomy`：活动分类树、别名与来源数量。
 - POST `/api/v1/taxonomy/run`：手动入队分类进化任务。
